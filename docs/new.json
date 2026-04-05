@@ -1,0 +1,27 @@
+{
+    "id": "cmpl-9107d68bc4e167ee",
+    "object": "text_completion",
+    "created": 1774850946,
+    "model": "qwen/",
+    "choices": [
+        {
+            "index": 0,
+            "text": " city of many neighborhoods, each with its own unique character and charm. One such neighborhood is the Mission District, known for its vibrant street art, diverse food scene, and rich cultural heritage. The Mission District is home to a large Latino population, and this is reflected in the many murals that adorn the walls of buildings throughout the neighborhood. These mur",
+            "logprobs": null,
+            "finish_reason": "length",
+            "stop_reason": null,
+            "token_ids": null,
+            "prompt_logprobs": null,
+            "prompt_token_ids": null
+        }
+    ],
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+        "prompt_tokens": 4,
+        "total_tokens": 74,
+        "completion_tokens": 70,
+        "prompt_tokens_details": null
+    },
+    "kv_transfer_params": null
+}
