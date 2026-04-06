@@ -20,14 +20,23 @@ from typing import Any
 from api.tools.bash import BashTool
 from api.tools.glob import GlobTool
 from api.tools.grep import GrepTool
+from api.tools.ls import ListTool
+from api.tools.read import ReadTool
+from api.tools.task import AgentInfo, TaskTool
+from api.tools.todo import TodoTool
 from api.tools.tool import Tool, ToolResult
 
 __all__ = [
     "Tool",
     "ToolResult",
+    "AgentInfo",
     "BashTool",
     "GrepTool",
     "GlobTool",
+    "ListTool",
+    "ReadTool",
+    "TaskTool",
+    "TodoTool",
     "get_tool",
     "get_all_tools",
     "get_tools_schema",
@@ -38,6 +47,10 @@ _TOOL_CLASSES: dict[str, type[Tool]] = {
     "bash": BashTool,
     "grep": GrepTool,
     "glob": GlobTool,
+    "ls": ListTool,
+    "read": ReadTool,
+    "task": TaskTool,
+    "todowrite": TodoTool,
 }
 
 
