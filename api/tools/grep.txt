@@ -1,0 +1,18 @@
+Fast content search tool that works with any codebase size. Uses ripgrep (rg) when available for best performance, and falls back to Python stdlib regex search otherwise.
+
+Searches file contents using regular expressions:
+  - Supports full regex syntax (e.g. "log.*Error", "function\s+\w+", "class\s+\w+Tool")
+  - Filter files by glob pattern with the `include` parameter (e.g. "*.py", "*.{ts,tsx}")
+  - Returns file paths, line numbers, and matching line text, sorted by modification time (most-recent first)
+  - Results are capped at 100 matches. If truncated, narrow your search with a more specific pattern or path.
+  - Individual matching lines longer than 2000 characters are trimmed.
+
+When to use:
+  - Use this tool to find files containing specific code patterns, function definitions, variable references, etc.
+  - If you need to count matches or use advanced ripgrep flags (e.g. -A/-B context lines, --multiline), use the Bash tool with `rg` directly instead.
+  - When doing an open-ended search that may require multiple rounds, combine Grep and Glob calls to iteratively narrow results.
+
+Parameters:
+  - pattern (required): The regex pattern to search for.
+  - path (optional): Directory to search in. Defaults to the repository root.
+  - include (optional): File glob filter to restrict which files are searched.

@@ -1,0 +1,14 @@
+Fast file pattern matching tool that works with any codebase size. Uses ripgrep --files when available (respects .gitignore automatically), and falls back to Python pathlib otherwise.
+
+  - Supports glob patterns like "**/*.py", "src/**/*.ts", "*.json"
+  - Returns matching file paths sorted by modification time (most-recent first)
+  - Results are capped at 100 files. If truncated, use a more specific path or pattern to narrow results.
+
+When to use:
+  - Use this tool when you need to find files by name or extension patterns.
+  - When doing an open-ended search that may require multiple rounds, combine multiple Glob and Grep calls to iteratively narrow results.
+  - You can call multiple tools in a single response. It is always better to speculatively perform multiple searches as a batch that are potentially useful.
+
+Parameters:
+  - pattern (required): The glob pattern to match files against.
+  - path (optional): The directory to search in. Defaults to the repository root. DO NOT pass "undefined" or "null" - simply omit for default.

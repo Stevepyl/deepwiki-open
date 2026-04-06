@@ -121,9 +121,9 @@ Done-conditions for common task types:
 
 | Task | Verification Command |
 |------|----------------------|
-| Backend API changes | `pytest tests/api/ -v` and manual test in browser |
-| Backend logic (RAG, data pipeline) | `pytest tests/unit/ -v -k unit` |
-| Frontend component changes | `npm run lint` (no errors), manual test at `http://localhost:3000` |
+| Backend API changes | `pytest tests/api/ -q --tb=short 2>&1 \| tail -50` and manual test in browser |
+| Backend logic (RAG, data pipeline) | `pytest tests/unit/ -q --tb=short -k unit 2>&1 \| tail -50` |
+| Frontend component changes | `npm run lint 2>&1 \| tail -30` (no errors), manual test at `http://localhost:3000` |
 | Full-stack changes | Run all above + verify WebSocket connection in Network tab |
 | Configuration changes | Verify `.env.example` documents new vars; manual test with fresh `.env` |
 

@@ -1,0 +1,44 @@
+Executes a given bash command with optional timeout, ensuring proper handling and security measures.
+
+Be aware: OS: ${os}, Shell: ${shell}
+
+All commands run in the repository root by default: ${directory}
+Use the `workdir` parameter if you need to run a command in a different directory. AVOID using `cd <directory> && <command>` patterns - use `workdir` instead.
+
+<good-example>
+Use workdir="src/components" with command: ls -la
+</good-example>
+<bad-example>
+cd src/components && ls -la
+</bad-example>
+
+IMPORTANT: Each command runs in its own subprocess — there are no persistent shell sessions. Environment variables and directory changes do NOT carry over between calls.
+
+IMPORTANT: This tool is for terminal operations like git, npm, docker, etc. DO NOT use it for file operations that have dedicated tools:
+  - File search: Use Glob (NOT find or ls)
+  - Content search: Use Grep (NOT grep or rg)
+Avoid using Bash with the `find`, `grep`, `cat`, `head`, `tail`, `sed`, `awk`, or `echo` commands unless truly necessary.
+
+Before executing the command, please follow these steps:
+
+1. Directory Verification:
+   - If the command will create new directories or files, first use `ls` to verify the parent directory exists and is the correct location
+   - For example, before running "mkdir foo/bar", first use `ls foo` to check that "foo" exists and is the intended parent directory
+
+2. Command Execution:
+   - Always quote file paths that contain spaces with double quotes
+   - Examples of proper quoting:
+     - python "path with spaces/script.py" (correct)
+     - python path with spaces/script.py (incorrect - will fail)
+   - After ensuring proper quoting, execute the command.
+   - Capture the output of the command.
+
+Usage notes:
+  - The command and description arguments are required.
+  - You can specify an optional timeout in milliseconds. If not specified, commands will time out after 120000ms (2 minutes).
+  - Write a clear, concise description of what this command does in 5-10 words.
+  - If the output exceeds ${maxLines} lines or ${maxBytes} bytes, it will be truncated. Use more specific commands or patterns to narrow output when possible.
+  - When issuing multiple commands:
+    - If commands depend on each other, chain with '&&'
+    - Use ';' only when you don't care if earlier commands fail
+    - DO NOT use newlines to separate commands (newlines are OK in quoted strings)
