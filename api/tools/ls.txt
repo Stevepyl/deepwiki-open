@@ -1,0 +1,9 @@
+Lists files and directories in a given path. The path parameter must be absolute; omit it to use the current repository root directory. You can optionally provide an array of glob patterns to ignore with the ignore parameter. Results are displayed as a directory tree structure.
+
+You should generally prefer the Glob and Grep tools if you know which directories to search. Use this tool when you need an overview of a directory's structure.
+
+Results are capped at 100 files. If truncated, use a more specific path to narrow results.
+
+Parameters:
+  - path (optional): The absolute path to the directory to list. Defaults to the repository root.
+  - ignore (optional): List of additional glob patterns to ignore.
