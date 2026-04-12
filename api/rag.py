@@ -426,11 +426,80 @@ IMPORTANT FORMATTING RULES:
         try:
             retrieved_documents = self.retriever(query)
 
-            # Fill in the documents
-            retrieved_documents[0].documents = [
-                self.transformed_docs[doc_index]
-                for doc_index in retrieved_documents[0].doc_indices
-            ]
+            if not retrieved_documents:
+                logger.warning("Retriever returned no results")
+                return retrieved_documents
+
+            result = retrieved_documents[0]
+
+            # doc_indices define the semantic ranking order (best -> worst)
+            doc_indices = list(getattr(result, "doc_indices", []) or [])
+            if not doc_indices:
+                logger.warning("Result has no doc_indices")
+                return retrieved_documents
+
+            # Approximate semantic scores from rank (normalized to [0, 1])
+            n = len(doc_indices)
+            if n == 1:
+                semantic_scores = {doc_indices[0]: 1.0}
+            else:
+                semantic_scores = {
+                    idx: (n - rank - 1) / (n - 1)
+                    for rank, idx in enumerate(doc_indices)
+                }
+
+            # Symbol-based scores from meta_data (file/symbol names)
+            query_lc = query.lower()
+            # Very simple tokenization over non-alphanumeric boundaries
+            query_tokens = [t for t in re.split(r"[^0-9a-zA-Z_]+", query_lc) if t]
+
+            def symbol_score_for_doc(doc) -> float:
+                meta = getattr(doc, "meta_data", {}) or {}
+                candidates = []
+                for key in (
+                    "symbol_full_name",
+                    "symbol_name",
+                    "parent_symbol",
+                    "file_path",
+                ):
+                    val = meta.get(key)
+                    if isinstance(val, str):
+                        candidates.append(val.lower())
+                if not candidates or not query_tokens:
+                    return 0.0
+
+                score = 0.0
+                qset = set(query_tokens)
+                for cand in candidates:
+                    for qt in qset:
+                        if not qt:
+                            continue
+                        if cand == qt:
+                            score = max(score, 1.0)
+                        elif qt in cand:
+                            score = max(score, 0.5)
+                return score
+
+            # Compute final blended scores
+            retriever_cfg = configs.get("retriever", {}) or {}
+            symbol_alpha = float(retriever_cfg.get("symbol_alpha", 0.7))
+            symbol_alpha = max(0.0, min(1.0, symbol_alpha))
+
+            blended: List[tuple[int, float]] = []
+            for idx in doc_indices:
+                doc = self.transformed_docs[idx]
+                sem = semantic_scores.get(idx, 0.0)
+                sym = symbol_score_for_doc(doc)
+                final_score = symbol_alpha * sem + (1.0 - symbol_alpha) * sym
+                blended.append((idx, final_score))
+
+            # Sort by blended score, descending
+            blended.sort(key=lambda x: x[1], reverse=True)
+            reranked_indices = [idx for idx, _ in blended]
+
+            # Update result doc_indices and documents according to new order
+            result.doc_indices = reranked_indices
+            result.documents = [self.transformed_docs[i] for i in reranked_indices]
 
             return retrieved_documents
 

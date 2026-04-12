@@ -12,6 +12,7 @@ from adalflow.utils import get_adalflow_default_root_path
 from adalflow.core.db import LocalDB
 from api.config import configs, DEFAULT_EXCLUDED_DIRS, DEFAULT_EXCLUDED_FILES
 from api.ollama_patch import OllamaDocumentProcessor
+from api.tools.ast_splitter import AstChunk, split_python_source_by_ast
 from urllib.parse import urlparse, urlunparse, quote
 import requests
 from requests.exceptions import RequestException
@@ -301,12 +302,24 @@ def read_all_documents(path: str, embedder_type: str = None, is_ollama_embedder:
 
             return not is_excluded
 
+    # AST long-chunk threshold for Python code (fall back to 2000 if not set)
+    ast_long_chunk_threshold = configs.get("text_splitter", {}).get(
+        "ast_long_chunk_threshold_tokens", 2000
+    )
+
     # Process code files first
     for ext in code_extensions:
         files = glob.glob(f"{path}/**/*{ext}", recursive=True)
         for file_path in files:
             # Check if file should be processed based on inclusion/exclusion rules
-            if not should_process_file(file_path, use_inclusion_mode, included_dirs, included_files, excluded_dirs, excluded_files):
+            if not should_process_file(
+                file_path,
+                use_inclusion_mode,
+                included_dirs,
+                included_files,
+                excluded_dirs,
+                excluded_files,
+            ):
                 continue
 
             try:
@@ -314,17 +327,20 @@ def read_all_documents(path: str, embedder_type: str = None, is_ollama_embedder:
                     content = f.read()
                     relative_path = os.path.relpath(file_path, path)
 
-                    # Determine if this is an implementation file
-                    is_implementation = (
-                        not relative_path.startswith("test_")
-                        and not relative_path.startswith("app_")
-                        and "test" not in relative_path.lower()
-                    )
+                # Determine if this is an implementation file
+                is_implementation = (
+                    not relative_path.startswith("test_")
+                    and not relative_path.startswith("app_")
+                    and "test" not in relative_path.lower()
+                )
 
-                    # Check token count
+                # For non-Python code, keep existing file-level behaviour
+                if ext != ".py":
                     token_count = count_tokens(content, embedder_type)
                     if token_count > MAX_EMBEDDING_TOKENS * 10:
-                        logger.warning(f"Skipping large file {relative_path}: Token count ({token_count}) exceeds limit")
+                        logger.warning(
+                            f"Skipping large file {relative_path}: Token count ({token_count}) exceeds limit"
+                        )
                         continue
 
                     doc = Document(
@@ -339,6 +355,71 @@ def read_all_documents(path: str, embedder_type: str = None, is_ollama_embedder:
                         },
                     )
                     documents.append(doc)
+                    continue
+
+                # Python code: split into AST-based chunks, then optionally sub-chunk long ones
+                try:
+                    ast_chunks = split_python_source_by_ast(
+                        source=content,
+                        file_path=relative_path,
+                        count_tokens_func=lambda text: count_tokens(text, embedder_type),
+                        max_embedding_tokens=MAX_EMBEDDING_TOKENS,
+                    )
+                except Exception as e:
+                    logger.error(f"Error splitting {relative_path} by AST: {e}")
+                    # Fallback to whole-file behaviour
+                    token_count = count_tokens(content, embedder_type)
+                    if token_count > MAX_EMBEDDING_TOKENS * 10:
+                        logger.warning(
+                            f"Skipping large file {relative_path}: Token count ({token_count}) exceeds limit"
+                        )
+                        continue
+
+                    doc = Document(
+                        text=content,
+                        meta_data={
+                            "file_path": relative_path,
+                            "type": ext[1:],
+                            "is_code": True,
+                            "is_implementation": is_implementation,
+                            "title": relative_path,
+                            "token_count": token_count,
+                        },
+                    )
+                    documents.append(doc)
+                    continue
+
+                for chunk_index, chunk in enumerate(ast_chunks):
+                    # Decide whether this AST chunk is "long" and might be further split
+                    is_long_chunk = chunk.token_count > ast_long_chunk_threshold
+
+                    # For now, we still let TextSplitter handle any finer-grained splitting.
+                    # We mark long chunks via meta_data so future logic can choose to treat
+                    # them differently if needed.
+                    base_meta = {
+                        "file_path": chunk.file_path,
+                        "type": "py",
+                        "is_code": True,
+                        "is_implementation": is_implementation,
+                        "title": chunk.symbol_full_name or chunk.file_path,
+                        "token_count": chunk.token_count,
+                        "module_path": chunk.module_path,
+                        "symbol_name": chunk.symbol_name,
+                        "parent_symbol": chunk.parent_symbol,
+                        "symbol_full_name": chunk.symbol_full_name,
+                        "ast_type": chunk.ast_type,
+                    }
+
+                    if is_long_chunk:
+                        base_meta["is_long_ast_chunk"] = True
+                        base_meta["ast_chunk_index"] = chunk_index
+                        base_meta["ast_chunk_count"] = len(ast_chunks)
+
+                    doc = Document(
+                        text=chunk.text,
+                        meta_data=base_meta,
+                    )
+                    documents.append(doc)
             except Exception as e:
                 logger.error(f"Error reading {file_path}: {e}")
 
@@ -347,7 +428,14 @@ def read_all_documents(path: str, embedder_type: str = None, is_ollama_embedder:
         files = glob.glob(f"{path}/**/*{ext}", recursive=True)
         for file_path in files:
             # Check if file should be processed based on inclusion/exclusion rules
-            if not should_process_file(file_path, use_inclusion_mode, included_dirs, included_files, excluded_dirs, excluded_files):
+            if not should_process_file(
+                file_path,
+                use_inclusion_mode,
+                included_dirs,
+                included_files,
+                excluded_dirs,
+                excluded_files,
+            ):
                 continue
 
             try:
@@ -355,24 +443,26 @@ def read_all_documents(path: str, embedder_type: str = None, is_ollama_embedder:
                     content = f.read()
                     relative_path = os.path.relpath(file_path, path)
 
-                    # Check token count
-                    token_count = count_tokens(content, embedder_type)
-                    if token_count > MAX_EMBEDDING_TOKENS:
-                        logger.warning(f"Skipping large file {relative_path}: Token count ({token_count}) exceeds limit")
-                        continue
-
-                    doc = Document(
-                        text=content,
-                        meta_data={
-                            "file_path": relative_path,
-                            "type": ext[1:],
-                            "is_code": False,
-                            "is_implementation": False,
-                            "title": relative_path,
-                            "token_count": token_count,
-                        },
+                # Check token count
+                token_count = count_tokens(content, embedder_type)
+                if token_count > MAX_EMBEDDING_TOKENS:
+                    logger.warning(
+                        f"Skipping large file {relative_path}: Token count ({token_count}) exceeds limit"
                     )
-                    documents.append(doc)
+                    continue
+
+                doc = Document(
+                    text=content,
+                    meta_data={
+                        "file_path": relative_path,
+                        "type": ext[1:],
+                        "is_code": False,
+                        "is_implementation": False,
+                        "title": relative_path,
+                        "token_count": token_count,
+                    },
+                )
+                documents.append(doc)
             except Exception as e:
                 logger.error(f"Error reading {file_path}: {e}")
 
