@@ -5,9 +5,19 @@ Provides the Agent Loop infrastructure: message model, unified provider,
 agent configuration, and the core loop that lets the LLM iteratively call
 tools to explore codebases before producing a final answer.
 
-Public surface for Subtask 1 (Message Model) and Subtask 2 (Unified Provider):
+Public surface for Subtask 1 (Message Model), Subtask 2 (Unified Provider),
+and Subtask 3 (Agent Config):
 """
 
+from api.agent.config import (
+    AgentConfig,
+    ModelOverride,
+    get_agent_config,
+    get_all_agent_configs,
+    get_all_agent_infos,
+    get_tools_for_agent,
+    register_agent,
+)
 from api.agent.message import (
     AgentMessage,
     ErrorPart,
@@ -34,6 +44,14 @@ from api.agent.stream_events import (
 )
 
 __all__ = [
+    # Subtask 3 — Agent Config
+    "AgentConfig",
+    "ModelOverride",
+    "get_agent_config",
+    "get_all_agent_configs",
+    "get_all_agent_infos",
+    "get_tools_for_agent",
+    "register_agent",
     # Subtask 1 — Message Model
     "AgentMessage",
     "ErrorPart",
