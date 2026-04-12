@@ -70,3 +70,6 @@ certs/
 
 # Claude Code local settings (may contain API keys, personal paths)
 .claude/settings.local.json
+
+# Development plans
+UPDATE-PLAN.md

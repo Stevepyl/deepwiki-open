@@ -32,11 +32,14 @@ def _grep_with_ripgrep(
     """Run ripgrep and parse output into match dicts."""
     # NOTE: --glob order matters in ripgrep. Exclude patterns must come AFTER
     # include patterns, otherwise the include re-matches excluded paths.
+    # --field-match-separator=| uses pipe as separator so we can safely split
+    # on "|" without ambiguity from file paths that may contain colons.
     args = [
         rg_path,
         "-nH",
         "--hidden",
         "--no-messages",
+        "--field-match-separator=|",
         "--regexp",
         pattern,
     ]
@@ -71,20 +74,12 @@ def _grep_with_ripgrep(
     for line in result.stdout.splitlines():
         if not line:
             continue
-        # Default ripgrep -nH format: filepath:linenum:line_text
-        # Left-to-right colon parsing. Safe on Unix/macOS where filenames
-        # rarely contain colons; not safe for Windows drive letters (C:\...),
-        # but this tool only targets Linux/macOS server environments.
-        first_colon = line.find(":")
-        if first_colon < 0:
+        # With --field-match-separator=| the format is: filepath|linenum|line_text
+        # Splitting with maxsplit=2 handles pipe characters in line_text correctly.
+        parts = line.split("|", 2)
+        if len(parts) < 3:
             continue
-        rest = line[first_colon + 1:]
-        second_colon = rest.find(":")
-        if second_colon < 0:
-            continue
-        file_path = line[:first_colon]
-        line_num_str = rest[:second_colon]
-        line_text = rest[second_colon + 1:]
+        file_path, line_num_str, line_text = parts
         try:
             line_num = int(line_num_str)
         except ValueError:
