@@ -30,7 +30,7 @@ from pydantic import BaseModel, ConfigDict, Field
 # ---------------------------------------------------------------------------
 
 StreamEventType = Literal[
-    "text_delta", "tool_call_start", "tool_call_delta", "finish", "error"
+    "text_delta", "tool_call_start", "tool_call_delta", "tool_call_end", "finish", "error"
 ]
 
 
@@ -93,6 +93,34 @@ class ToolCallDelta(BaseModel):
     args_delta: str  # raw JSON string fragment
 
 
+class ToolCallEnd(BaseModel):
+    """
+    Signals that a tool has finished executing.
+
+    Emitted by the agent loop (not the provider) after tool.execute() returns.
+    The frontend uses this to transition tool call cards from the "running"
+    state to "completed" or "error".
+
+    result_summary is a truncated preview (first 200 chars) of the tool output,
+    suitable for display in collapsed tool cards. The full result is fed back
+    to the LLM in a tool message but is not sent to the frontend separately.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    type: Literal["tool_call_end"] = "tool_call_end"
+    tool_call_id: str
+    tool_name: str
+    result_summary: str
+    is_error: bool = False
+    duration_ms: int = 0
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+    def model_post_init(self, __context: Any) -> None:
+        """Defensive copy of mutable metadata dict."""
+        object.__setattr__(self, "metadata", dict(self.metadata))
+
+
 class FinishEvent(BaseModel):
     """
     Signals that the provider has finished streaming.
@@ -143,6 +171,6 @@ class ErrorEvent(BaseModel):
 # Pydantic reads the `type` field first for O(1) dispatch — same approach
 # as MessagePart in message.py.
 StreamEvent = Annotated[
-    Union[TextDelta, ToolCallStart, ToolCallDelta, FinishEvent, ErrorEvent],
+    Union[TextDelta, ToolCallStart, ToolCallDelta, ToolCallEnd, FinishEvent, ErrorEvent],
     Field(discriminator="type"),
 ]
