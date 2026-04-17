@@ -12,11 +12,13 @@ DeepWiki-Open is a full-stack application that generates AI-powered interactive 
 
 ```bash
 # Install dependencies (run from project root)
-python -m pip install poetry==2.0.1
-poetry install -C api
+uv sync --directory api # install all deps including dev if in the root directory of the proj
+
+# Activating virtual environment
+source api/.venv/bin/activate
 
 # Start API server (port 8001, auto-reload enabled)
-python -m api.main
+uv run -m api.main
 ```
 
 ### Frontend (Next.js)
