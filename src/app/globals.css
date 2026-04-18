@@ -4,17 +4,17 @@
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 :root {
-  /* Japanese aesthetic color palette - light mode */
-  --background: #f8f4e6; /* Warm off-white like washi paper */
-  --foreground: #333333; /* Soft black for text */
-  --shadow-color: rgba(0, 0, 0, 0.05);
-  --accent-primary: #9b7cb9; /* Soft purple (Fuji) */
-  --accent-secondary: #d7c4bb; /* Soft beige (Kinari) */
-  --border-color: #e0d8c8; /* Soft beige border */
-  --card-bg: #fffaf0; /* Slightly warmer than background */
-  --highlight: #e8927c; /* Soft coral (Akane) */
-  --muted: #a59e8c; /* Soft gray-brown (Nezumi) */
-  --link-color: #7c5aa0; /* Slightly darker purple for links */
+  /* Neutral light palette */
+  --background: #ffffff;
+  --foreground: #111827;
+  --shadow-color: rgba(15, 23, 42, 0.06);
+  --accent-primary: #2563eb;
+  --accent-secondary: #e5e7eb;
+  --border-color: #e5e7eb;
+  --card-bg: #ffffff;
+  --highlight: #dc2626;
+  --muted: #6b7280;
+  --link-color: #1d4ed8;
 }
 
 html[data-theme='dark'] {
