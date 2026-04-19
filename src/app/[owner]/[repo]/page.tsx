@@ -487,11 +487,11 @@ Based ONLY on the content of the \`[RELEVANT_SOURCE_FILES]\`:
 9.  **Conclusion/Summary:** End with a brief summary paragraph if appropriate for "${page.title}", reiterating the key aspects covered and their significance within the project.
 
 IMPORTANT: Generate the content in ${language === 'en' ? 'English' :
-            language === 'ja' ? 'Japanese (日本�?' :
+            language === 'ja' ? 'Japanese (\u65e5\u672c\u8a9e)' :
             language === 'zh' ? 'Mandarin Chinese (中文)' :
             language === 'zh-tw' ? 'Traditional Chinese (繁體中文)' :
             language === 'es' ? 'Spanish (Español)' :
-            language === 'kr' ? 'Korean (한국�?' :
+            language === 'kr' ? 'Korean (\ud55c\uad6d\uc5b4)' :
             language === 'vi' ? 'Vietnamese (Tiếng Việt)' : 
             language === "pt-br" ? "Brazilian Portuguese (Português Brasileiro)" :
             language === "fr" ? "Français (French)" :
@@ -703,11 +703,11 @@ ${readme}
 I want to create a wiki for this repository. Determine the most logical structure for a wiki based on the repository's content.
 
 IMPORTANT: The wiki content will be generated in ${language === 'en' ? 'English' :
-            language === 'ja' ? 'Japanese (日本�?' :
+            language === 'ja' ? 'Japanese (\u65e5\u672c\u8a9e)' :
             language === 'zh' ? 'Mandarin Chinese (中文)' :
             language === 'zh-tw' ? 'Traditional Chinese (繁體中文)' :
             language === 'es' ? 'Spanish (Español)' :
-            language === 'kr' ? 'Korean (한国�?' :
+            language === 'kr' ? 'Korean (\ud55c\uad6d\uc5b4)' :
             language === 'vi' ? 'Vietnamese (Tiếng Việt)' :
             language === "pt-br" ? "Brazilian Portuguese (Português Brasileiro)" :
             language === "fr" ? "Français (French)" :
@@ -1483,7 +1483,7 @@ IMPORTANT:
     try {
       setIsExporting(true);
       setExportError(null);
-      setLoadingMessage(`${language === 'ja' ? 'Wiki�? : 'Exporting wiki as '} ${format} ${language === 'ja' ? 'としてエクスポート中...' : '...'}`);
+      setLoadingMessage(`${language === 'ja' ? 'Wiki\u3092' : 'Exporting wiki as '} ${format} ${language === 'ja' ? '\u3068\u3057\u3066\u30a8\u30af\u30b9\u30dd\u30fc\u30c8\u4e2d...' : '...'}`);
 
       // Prepare the pages for export
       const pagesToExport = wikiStructure.pages.map(page => {

@@ -384,6 +384,10 @@ def read_all_documents(path: str, embedder_type: str = None, is_ollama_embedder:
                             "is_implementation": is_implementation,
                             "title": relative_path,
                             "token_count": token_count,
+                            "start_line": 1,
+                            "end_line": len(content.splitlines()),
+                            "ast_chunk_index": 0,
+                            "ast_chunk_count": 1,
                         },
                     )
                     documents.append(doc)
@@ -408,12 +412,14 @@ def read_all_documents(path: str, embedder_type: str = None, is_ollama_embedder:
                         "parent_symbol": chunk.parent_symbol,
                         "symbol_full_name": chunk.symbol_full_name,
                         "ast_type": chunk.ast_type,
+                        "start_line": chunk.start_line,
+                        "end_line": chunk.end_line,
+                        "ast_chunk_index": chunk_index,
+                        "ast_chunk_count": len(ast_chunks),
                     }
 
                     if is_long_chunk:
                         base_meta["is_long_ast_chunk"] = True
-                        base_meta["ast_chunk_index"] = chunk_index
-                        base_meta["ast_chunk_count"] = len(ast_chunks)
 
                     doc = Document(
                         text=chunk.text,
@@ -952,6 +958,27 @@ class DatabaseManager:
                 return 0
             return 0
 
+        def _needs_python_metadata_refresh(documents: List[Document]) -> bool:
+            required_fields = (
+                "start_line",
+                "end_line",
+                "ast_chunk_index",
+                "ast_chunk_count",
+            )
+            for doc in documents:
+                meta = getattr(doc, "meta_data", {}) or {}
+                if meta.get("type") != "py":
+                    continue
+                for field_name in required_fields:
+                    if meta.get(field_name) is None:
+                        logger.warning(
+                            "Existing database is missing Python chunk metadata '%s' for %s. Rebuilding database...",
+                            field_name,
+                            meta.get("file_path", "unknown"),
+                        )
+                        return True
+            return False
+
         # Handle backward compatibility
         if embedder_type is None and is_ollama_embedder is not None:
             embedder_type = 'ollama' if is_ollama_embedder else None
@@ -977,6 +1004,10 @@ class DatabaseManager:
                     if non_empty == 0:
                         logger.warning(
                             "Existing database contains no usable embeddings. Rebuilding embeddings..."
+                        )
+                    elif _needs_python_metadata_refresh(documents):
+                        logger.warning(
+                            "Existing database is missing required Python chunk metadata. Rebuilding embeddings..."
                         )
                     else:
                         return documents

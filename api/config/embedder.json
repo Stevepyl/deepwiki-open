@@ -32,7 +32,24 @@
     }
   },
   "retriever": {
-    "top_k": 20
+    "top_k": 20,
+    "symbol_alpha": 0.7,
+    "multi_hop": {
+      "enabled": true,
+      "seed_k": 4,
+      "hop2_max_per_seed": 3,
+      "neighbor_window": 1,
+      "final_top_k": 20,
+      "final_semantic_weight": 0.55,
+      "final_anchor_weight": 0.30,
+      "final_seed_weight": 0.15,
+      "anchor_weights": {
+        "symbol_full_name": 1.0,
+        "symbol_name": 0.85,
+        "parent_symbol": 0.65,
+        "same_file_neighbor": 0.5
+      }
+    }
   },
   "text_splitter": {
     "split_by": "word",
