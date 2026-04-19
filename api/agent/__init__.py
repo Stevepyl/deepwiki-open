@@ -43,6 +43,10 @@ from api.agent.stream_events import (
     ToolCallDelta,
     ToolCallEnd,
     ToolCallStart,
+    WikiPageDone,
+    WikiPageError,
+    WikiStructureError,
+    WikiStructureReady,
 )
 
 __all__ = [
@@ -77,6 +81,11 @@ __all__ = [
     "ToolCallDelta",
     "ToolCallEnd",
     "ToolCallStart",
+    # Subtask 12 — Wiki generation events
+    "WikiPageDone",
+    "WikiPageError",
+    "WikiStructureError",
+    "WikiStructureReady",
     # Subtask 4 — Agent Loop
     "run_agent_loop",
 ]

@@ -198,12 +198,18 @@ def get_all_agent_infos() -> list[AgentInfo]:
 # ---------------------------------------------------------------------------
 
 def _register_defaults() -> None:
-    """Register the three built-in agent configurations.
+    """Register the five built-in agent configurations.
 
     Called once at module import time. Prompts are lazy-imported here to avoid
     a circular dependency if api.prompts ever imports from api.agent.
     """
-    from api.prompts import AGENT_SYSTEM_PROMPT, DEEP_RESEARCH_AGENT_SYSTEM_PROMPT, EXPLORE_AGENT_SYSTEM_PROMPT  # noqa: PLC0415
+    from api.prompts import (  # noqa: PLC0415
+        AGENT_SYSTEM_PROMPT,
+        DEEP_RESEARCH_AGENT_SYSTEM_PROMPT,
+        EXPLORE_AGENT_SYSTEM_PROMPT,
+        WIKI_PLANNER_SYSTEM_PROMPT,
+        WIKI_WRITER_SYSTEM_PROMPT,
+    )
 
     register_agent(AgentConfig(
         name="wiki",
@@ -230,6 +236,24 @@ def _register_defaults() -> None:
         system_prompt_template=DEEP_RESEARCH_AGENT_SYSTEM_PROMPT,
         allowed_tools=_ALL_TOOLS,
         max_steps=40,
+    ))
+
+    register_agent(AgentConfig(
+        name="wiki-planner",
+        description="Plans wiki structure by exploring the repo with read-only tools; outputs strict JSON.",
+        mode="primary",
+        system_prompt_template=WIKI_PLANNER_SYSTEM_PROMPT,
+        allowed_tools=_READ_ONLY_TOOLS,
+        max_steps=20,
+    ))
+
+    register_agent(AgentConfig(
+        name="wiki-writer",
+        description="Writes a single wiki page using the codebase as ground truth (explore-then-write).",
+        mode="primary",
+        system_prompt_template=WIKI_WRITER_SYSTEM_PROMPT,
+        allowed_tools=("grep", "glob", "ls", "read", "bash"),
+        max_steps=25,
     ))
 
 
