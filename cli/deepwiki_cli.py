@@ -10,7 +10,7 @@ Options:
     --provider      LLM provider name (default: from api/config/generator.json)
     --model         model name (default: provider default)
     --language      output language code, e.g. en / zh / ja  (default: en)
-    --comprehensive generate 8-12 page wiki with sections tree
+    --comprehensive generate 15-20 page wiki with sections tree
                     (default: concise 4-6 page flat list)
 
 REPL commands:
@@ -467,11 +467,12 @@ def main() -> None:
     print(f"Language : {_LANGUAGE_NAMES.get(args.language, args.language)}")
     print(
         f"Wiki mode: "
-        f"{'comprehensive (8-12 pages)' if args.comprehensive else 'concise (4-6 pages)'}"
+        f"{'comprehensive (15-20 pages)' if args.comprehensive else 'concise (8-10 pages)'}"
     )
-    print()
-    print("Building FAISS index (first run may take a while)...")
-    DatabaseManager().prepare_retriever(args.repo_url, args.repo_type, args.token)
+    # print()
+    # print("Building FAISS index (first run may take a while)...")
+    # DatabaseManager().prepare_retriever(args.repo_url, args.repo_type, args.token)
+    DatabaseManager()._create_repo(repo_url_or_path=args.repo_url, repo_type=args.repo_type, access_token=args.token)
 
     provider = UnifiedProvider(provider_name, model)
     asyncio.run(

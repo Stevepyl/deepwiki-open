@@ -60,12 +60,12 @@ _PHASE2_TIMEOUT_S = 300   # 5 min per-page writer ceiling
 _ADALFLOW_ROOT = os.path.expanduser(os.path.join("~", ".adalflow"))
 
 _COMPREHENSIVE_INSTRUCTION = (
-    "Generate 8-12 pages. Include a 'sections' array that groups pages into "
+    "Generate 15-20 pages. Include a 'sections' array that groups pages into "
     "logical categories (max 2 nesting levels). Include a 'rootSections' array "
     "with the IDs of top-level sections."
 )
 _CONCISE_INSTRUCTION = (
-    "Generate 4-6 pages. Omit 'sections' and 'rootSections' fields (set them to null). "
+    "Generate 8-10 pages. Omit 'sections' and 'rootSections' fields (set them to null). "
     "Keep the page list flat."
 )
 
