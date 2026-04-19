@@ -139,6 +139,7 @@ async def _execute_tools_parallel(
     async def _run_one(tc: ToolCallPart) -> tuple[ToolResult, bool, int]:
         start = time.monotonic()
         tool = tools.get(tc.tool_name)
+        tool_logger = logging.getLogger(f"api.tools.{tc.tool_name}")
 
         if tool is None:
             duration_ms = int((time.monotonic() - start) * 1000)
@@ -156,10 +157,25 @@ async def _execute_tools_parallel(
                 duration_ms,
             )
 
+        tool_logger.debug(
+            "Tool '%s' called (call_id=%s) with params: %s",
+            tc.tool_name,
+            tc.tool_call_id,
+            json.dumps(tc.tool_args, default=str),
+        )
+
         try:
             result = await tool.execute(tc.tool_args)
             duration_ms = int((time.monotonic() - start) * 1000)
             is_error = bool(result.metadata.get("error"))
+            tool_logger.debug(
+                "Tool '%s' completed (call_id=%s, duration=%dms, error=%s, title=%s)",
+                tc.tool_name,
+                tc.tool_call_id,
+                duration_ms,
+                is_error,
+                result.title,
+            )
             return (result, is_error, duration_ms)
         except Exception as exc:
             duration_ms = int((time.monotonic() - start) * 1000)
