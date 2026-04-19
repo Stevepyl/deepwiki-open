@@ -3,24 +3,24 @@
 # Build argument for custom certificates directory
 ARG CUSTOM_CERT_DIR="certs"
 
-FROM node:20-alpine3.22 AS node_base
+FROM oven/bun:1-alpine AS node_base
 
 FROM node_base AS node_deps
 WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm ci --legacy-peer-deps
+COPY package.json bun.lockb ./
+RUN bun install --frozen-lockfile
 
 FROM node_base AS node_builder
 WORKDIR /app
 COPY --from=node_deps /app/node_modules ./node_modules
 # Copy only necessary files for Next.js build
-COPY package.json package-lock.json next.config.ts tsconfig.json tailwind.config.js postcss.config.mjs ./
+COPY package.json bun.lockb next.config.ts tsconfig.json tailwind.config.js postcss.config.mjs ./
 COPY src/ ./src/
 COPY public/ ./public/
 # Increase Node.js memory limit for build and disable telemetry
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN NODE_ENV=production npm run build
+RUN NODE_ENV=production bun run build
 
 FROM python:3.11-slim AS py_deps
 WORKDIR /api

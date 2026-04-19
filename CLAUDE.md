@@ -24,10 +24,10 @@ uv run -m api.main
 ### Frontend (Next.js)
 
 ```bash
-npm install
-npm run dev       # Development with Turbopack hot reload (port 3000)
-npm run build     # Production build
-npm run lint      # ESLint
+bun install
+bun dev       # Development with Turbopack hot reload (port 3000)
+bun run build     # Production build
+bun run lint      # ESLint
 ```
 
 ### Docker
@@ -125,7 +125,7 @@ Done-conditions for common task types:
 |------|----------------------|
 | Backend API changes | `pytest tests/api/ -q --tb=short 2>&1 \| tail -50` and manual test in browser |
 | Backend logic (RAG, data pipeline) | `pytest tests/unit/ -q --tb=short -k unit 2>&1 \| tail -50` |
-| Frontend component changes | `npm run lint 2>&1 \| tail -30` (no errors), manual test at `http://localhost:3000` |
+| Frontend component changes | `bun run lint 2>&1 \| tail -30` (no errors), manual test at `http://localhost:3000` |
 | Full-stack changes | Run all above + verify WebSocket connection in Network tab |
 | Configuration changes | Verify `.env.example` documents new vars; manual test with fresh `.env` |
 
