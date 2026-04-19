@@ -81,6 +81,7 @@ export default function Home() {
 
   const loadConfigFromCache = (repoUrl: string) => {
     if (!repoUrl) return;
+    if (typeof window === "undefined" || typeof localStorage === "undefined" || typeof localStorage.getItem !== "function") return;
     try {
       const cachedConfigs = localStorage.getItem(REPO_CONFIG_CACHE_KEY);
       if (cachedConfigs) {
@@ -308,7 +309,7 @@ export default function Home() {
 
     try {
       const currentRepoUrl = repositoryInput.trim();
-      if (currentRepoUrl) {
+      if (currentRepoUrl && typeof window !== "undefined" && typeof localStorage !== "undefined" && typeof localStorage.getItem === "function") {
         const existingConfigs = JSON.parse(localStorage.getItem(REPO_CONFIG_CACHE_KEY) || '{}');
         const configToSave = {
           selectedLanguage,
