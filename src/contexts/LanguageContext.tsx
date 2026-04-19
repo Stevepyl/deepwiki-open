@@ -3,6 +3,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { locales } from '@/i18n';
+import { safeLocalStorage } from '@/utils/safeLocalStorage';
 
 type Messages = Record<string, any>;
 type LanguageContextType = {
@@ -105,7 +106,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
           // Only access localStorage in the browser
           let storedLanguage;
           if (typeof window !== 'undefined') {
-            storedLanguage = localStorage.getItem('language');
+            storedLanguage = safeLocalStorage.getItem('language');
     
             // If no language is stored, detect browser language
             if (!storedLanguage) {
@@ -113,7 +114,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
               storedLanguage = detectBrowserLanguage();
     
               // Store the detected language
-              localStorage.setItem('language', storedLanguage);
+              safeLocalStorage.setItem('language', storedLanguage);
             }
           } else {
             console.log('Running on server-side, using default language');
@@ -163,7 +164,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
       // Store in localStorage (only in browser)
       if (typeof window !== 'undefined') {
-        localStorage.setItem('language', validLanguage);
+        safeLocalStorage.setItem('language', validLanguage);
       }
 
       // Update HTML lang attribute (only in browser)

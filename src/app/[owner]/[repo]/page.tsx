@@ -9,6 +9,7 @@ import WikiTreeView from '@/components/WikiTreeView';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { RepoInfo } from '@/types/repoinfo';
 import getRepoUrl from '@/utils/getRepoUrl';
+import { safeLocalStorage } from '@/utils/safeLocalStorage';
 import { extractUrlDomain, extractUrlPath } from '@/utils/urlDecoder';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
@@ -1631,9 +1632,9 @@ IMPORTANT:
     // Proceed with the rest of the refresh logic
     console.log('Refreshing wiki. Server cache will be overwritten upon new generation if not cleared.');
 
-    // Clear the localStorage cache (if any remnants or if it was used before this change)
+    // Clear the localStorage cache if browser storage is available.
     const localStorageCacheKey = getCacheKey(effectiveRepoInfo.owner, effectiveRepoInfo.repo, effectiveRepoInfo.type, language, isComprehensiveView);
-    localStorage.removeItem(localStorageCacheKey);
+    safeLocalStorage.removeItem(localStorageCacheKey);
 
     // Reset cache loaded flag
     cacheLoadedSuccessfully.current = false;
@@ -2263,4 +2264,3 @@ IMPORTANT:
     </div>
   );
 }
-
