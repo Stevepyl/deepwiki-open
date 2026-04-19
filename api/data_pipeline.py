@@ -862,6 +862,27 @@ class DatabaseManager:
                 return 0
             return 0
 
+        def _needs_python_metadata_refresh(documents: List[Document]) -> bool:
+            required_fields = (
+                "start_line",
+                "end_line",
+                "ast_chunk_index",
+                "ast_chunk_count",
+            )
+            for doc in documents:
+                meta = getattr(doc, "meta_data", {}) or {}
+                if meta.get("type") != "py":
+                    continue
+                for field_name in required_fields:
+                    if meta.get(field_name) is None:
+                        logger.warning(
+                            "Existing database is missing Python chunk metadata '%s' for %s. Rebuilding database...",
+                            field_name,
+                            meta.get("file_path", "unknown"),
+                        )
+                        return True
+            return False
+
         # Handle backward compatibility
         if embedder_type is None and is_ollama_embedder is not None:
             embedder_type = 'ollama' if is_ollama_embedder else None
@@ -887,6 +908,10 @@ class DatabaseManager:
                     if non_empty == 0:
                         logger.warning(
                             "Existing database contains no usable embeddings. Rebuilding embeddings..."
+                        )
+                    elif _needs_python_metadata_refresh(documents):
+                        logger.warning(
+                            "Existing database is missing required Python chunk metadata. Rebuilding embeddings..."
                         )
                     else:
                         return documents

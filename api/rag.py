@@ -1,8 +1,10 @@
 import logging
 import weakref
 import re
-from dataclasses import dataclass
-from typing import Any, List, Tuple, Dict
+from collections import defaultdict
+from dataclasses import dataclass, field
+from functools import cmp_to_key
+from typing import Any, Dict, List, Tuple
 from uuid import uuid4
 
 import adalflow as adal
@@ -47,6 +49,25 @@ logger = logging.getLogger(__name__)
 
 # Maximum token limit for embedding models
 MAX_INPUT_TOKENS = 7500  # Safe threshold below 8192 token limit
+
+DEFAULT_MULTI_HOP_ANCHOR_WEIGHTS = {
+    "symbol_full_name": 1.0,
+    "symbol_name": 0.85,
+    "parent_symbol": 0.65,
+    "same_file_neighbor": 0.5,
+}
+
+DEFAULT_MULTI_HOP_CONFIG = {
+    "enabled": True,
+    "seed_k": 4,
+    "hop2_max_per_seed": 3,
+    "neighbor_window": 1,
+    "final_top_k": 10,
+    "final_semantic_weight": 0.55,
+    "final_anchor_weight": 0.30,
+    "final_seed_weight": 0.15,
+    "anchor_weights": DEFAULT_MULTI_HOP_ANCHOR_WEIGHTS,
+}
 
 class Memory(adal.core.component.DataComponent):
     """Simple conversation management with a list of dialog turns."""
@@ -139,9 +160,6 @@ class Memory(adal.core.component.DataComponent):
             except Exception as e2:
                 logger.error(f"Failed to recover from error: {str(e2)}")
                 return False
-
-
-from dataclasses import dataclass, field
 
 @dataclass
 class RAGAnswer(adal.DataClass):
@@ -247,6 +265,339 @@ IMPORTANT FORMATTING RULES:
         """Initialize the database manager with local storage"""
         self.db_manager = DatabaseManager()
         self.transformed_docs = []
+        self.doc_index_map = {}
+        self.docs_by_file = {}
+        self.docs_by_symbol_full_name = {}
+        self.docs_by_file_symbol_name = {}
+        self.docs_by_file_parent_symbol = {}
+        self.doc_position_in_file = {}
+
+    @staticmethod
+    def _safe_int(value: Any, default: int | None = None) -> int | None:
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return default
+
+    @staticmethod
+    def _clamp_float(value: Any, default: float, minimum: float = 0.0, maximum: float = 1.0) -> float:
+        try:
+            return max(minimum, min(maximum, float(value)))
+        except (TypeError, ValueError):
+            return default
+
+    def _get_retriever_config(self) -> Dict[str, Any]:
+        return dict(configs.get("retriever", {}) or {})
+
+    def _get_faiss_retriever_config(self) -> Dict[str, Any]:
+        retriever_cfg = self._get_retriever_config()
+        retriever_cfg.pop("symbol_alpha", None)
+        retriever_cfg.pop("multi_hop", None)
+        return retriever_cfg
+
+    def _get_multi_hop_config(self) -> Dict[str, Any]:
+        retriever_cfg = self._get_retriever_config()
+        raw_cfg = retriever_cfg.get("multi_hop") or {}
+
+        config = dict(DEFAULT_MULTI_HOP_CONFIG)
+        config.update({k: v for k, v in raw_cfg.items() if k != "anchor_weights"})
+
+        anchor_weights = dict(DEFAULT_MULTI_HOP_ANCHOR_WEIGHTS)
+        anchor_weights.update(raw_cfg.get("anchor_weights") or {})
+        config["anchor_weights"] = {
+            key: self._clamp_float(value, DEFAULT_MULTI_HOP_ANCHOR_WEIGHTS[key])
+            for key, value in anchor_weights.items()
+        }
+
+        config["enabled"] = bool(config.get("enabled", True))
+        config["seed_k"] = max(1, self._safe_int(config.get("seed_k"), 4) or 4)
+        config["hop2_max_per_seed"] = max(1, self._safe_int(config.get("hop2_max_per_seed"), 3) or 3)
+        config["neighbor_window"] = max(1, self._safe_int(config.get("neighbor_window"), 1) or 1)
+        config["final_top_k"] = max(1, self._safe_int(config.get("final_top_k"), 10) or 10)
+        config["final_semantic_weight"] = self._clamp_float(config.get("final_semantic_weight"), 0.55)
+        config["final_anchor_weight"] = self._clamp_float(config.get("final_anchor_weight"), 0.30)
+        config["final_seed_weight"] = self._clamp_float(config.get("final_seed_weight"), 0.15)
+        return config
+
+    @staticmethod
+    def _get_doc_meta(doc: Any) -> Dict[str, Any]:
+        return getattr(doc, "meta_data", {}) or {}
+
+    def _doc_ast_chunk_index(self, doc_index: int) -> int:
+        meta = self._get_doc_meta(self.doc_index_map[doc_index])
+        return self._safe_int(meta.get("ast_chunk_index"), 10**9) or 10**9
+
+    def _doc_start_line(self, doc_index: int) -> int:
+        meta = self._get_doc_meta(self.doc_index_map[doc_index])
+        return self._safe_int(meta.get("start_line"), 10**9) or 10**9
+
+    def _build_document_indices(self) -> None:
+        self.doc_index_map = {idx: doc for idx, doc in enumerate(self.transformed_docs)}
+
+        docs_by_file = defaultdict(list)
+        docs_by_symbol_full_name = defaultdict(list)
+        docs_by_file_symbol_name = defaultdict(list)
+        docs_by_file_parent_symbol = defaultdict(list)
+
+        for idx, doc in self.doc_index_map.items():
+            meta = self._get_doc_meta(doc)
+            file_path = meta.get("file_path")
+            if isinstance(file_path, str) and file_path:
+                docs_by_file[file_path].append(idx)
+
+            symbol_full_name = meta.get("symbol_full_name")
+            if isinstance(symbol_full_name, str) and symbol_full_name:
+                docs_by_symbol_full_name[symbol_full_name].append(idx)
+
+            symbol_name = meta.get("symbol_name")
+            if isinstance(file_path, str) and file_path and isinstance(symbol_name, str) and symbol_name:
+                docs_by_file_symbol_name[(file_path, symbol_name)].append(idx)
+
+            parent_symbol = meta.get("parent_symbol")
+            if isinstance(file_path, str) and file_path and isinstance(parent_symbol, str) and parent_symbol:
+                docs_by_file_parent_symbol[(file_path, parent_symbol)].append(idx)
+
+        self.docs_by_file = {}
+        self.doc_position_in_file = {}
+        for file_path, indices in docs_by_file.items():
+            indices.sort(key=lambda idx: (self._doc_ast_chunk_index(idx), self._doc_start_line(idx), idx))
+            self.docs_by_file[file_path] = indices
+            self.doc_position_in_file[file_path] = {
+                doc_index: position for position, doc_index in enumerate(indices)
+            }
+
+        self.docs_by_symbol_full_name = dict(docs_by_symbol_full_name)
+        self.docs_by_file_symbol_name = dict(docs_by_file_symbol_name)
+        self.docs_by_file_parent_symbol = dict(docs_by_file_parent_symbol)
+
+    @staticmethod
+    def _normalize_rank_scores(doc_indices: List[int]) -> Dict[int, float]:
+        if not doc_indices:
+            return {}
+        if len(doc_indices) == 1:
+            return {doc_indices[0]: 1.0}
+        n = len(doc_indices)
+        return {
+            idx: (n - rank - 1) / (n - 1)
+            for rank, idx in enumerate(doc_indices)
+        }
+
+    @staticmethod
+    def _extract_query_tokens(query: str) -> List[str]:
+        query_lc = query.lower()
+        return [token for token in re.split(r"[^0-9a-zA-Z_]+", query_lc) if token]
+
+    def _symbol_score_for_doc(self, doc: Any, query_tokens: List[str]) -> float:
+        meta = self._get_doc_meta(doc)
+        candidates = []
+        for key in ("symbol_full_name", "symbol_name", "parent_symbol", "file_path"):
+            value = meta.get(key)
+            if isinstance(value, str):
+                candidates.append(value.lower())
+        if not candidates or not query_tokens:
+            return 0.0
+
+        score = 0.0
+        query_token_set = set(query_tokens)
+        for candidate in candidates:
+            for query_token in query_token_set:
+                if candidate == query_token:
+                    score = max(score, 1.0)
+                elif query_token in candidate:
+                    score = max(score, 0.5)
+        return score
+
+    def _rerank_hop1(self, doc_indices: List[int], query: str) -> Tuple[List[int], Dict[int, float]]:
+        semantic_scores = self._normalize_rank_scores(doc_indices)
+        query_tokens = self._extract_query_tokens(query)
+        symbol_alpha = self._clamp_float(self._get_retriever_config().get("symbol_alpha", 0.7), 0.7)
+
+        blended = []
+        for idx in doc_indices:
+            doc = self.doc_index_map[idx]
+            semantic_score = semantic_scores.get(idx, 0.0)
+            symbol_score = self._symbol_score_for_doc(doc, query_tokens)
+            final_score = symbol_alpha * semantic_score + (1.0 - symbol_alpha) * symbol_score
+            blended.append((idx, final_score))
+
+        blended.sort(key=lambda item: item[1], reverse=True)
+        return [idx for idx, _ in blended], semantic_scores
+
+    def _is_expandable_code_doc(self, doc: Any) -> bool:
+        meta = self._get_doc_meta(doc)
+        return bool(meta.get("is_code")) and isinstance(meta.get("file_path"), str) and bool(meta.get("file_path"))
+
+    def _supports_neighbor_expansion(self, doc: Any) -> bool:
+        meta = self._get_doc_meta(doc)
+        return (
+            self._is_expandable_code_doc(doc)
+            and meta.get("type") == "py"
+            and self._safe_int(meta.get("ast_chunk_index")) is not None
+            and self._safe_int(meta.get("start_line")) is not None
+        )
+
+    def _add_hop2_candidates(
+        self,
+        seed_index: int,
+        candidate_indices: List[int],
+        anchor_weight: float,
+        local_selected: set[int],
+        local_count: int,
+        max_per_seed: int,
+        anchor_scores: Dict[int, float],
+    ) -> int:
+        for candidate_index in candidate_indices:
+            if local_count >= max_per_seed:
+                break
+            if candidate_index == seed_index or candidate_index in local_selected:
+                continue
+
+            candidate_doc = self.doc_index_map.get(candidate_index)
+            if candidate_doc is None or not self._is_expandable_code_doc(candidate_doc):
+                continue
+
+            local_selected.add(candidate_index)
+            local_count += 1
+            anchor_scores[candidate_index] = max(anchor_scores.get(candidate_index, 0.0), anchor_weight)
+        return local_count
+
+    def _expand_hop2(self, seed_indices: List[int], multi_hop_cfg: Dict[str, Any]) -> Dict[int, float]:
+        anchor_scores: Dict[int, float] = {}
+        anchor_weights = multi_hop_cfg["anchor_weights"]
+        max_per_seed = multi_hop_cfg["hop2_max_per_seed"]
+        neighbor_window = multi_hop_cfg["neighbor_window"]
+
+        for seed_index in seed_indices:
+            seed_doc = self.doc_index_map.get(seed_index)
+            if seed_doc is None or not self._is_expandable_code_doc(seed_doc):
+                continue
+
+            meta = self._get_doc_meta(seed_doc)
+            file_path = meta.get("file_path")
+            if not isinstance(file_path, str) or not file_path:
+                continue
+
+            local_selected: set[int] = set()
+            local_count = 0
+
+            symbol_full_name = meta.get("symbol_full_name")
+            if isinstance(symbol_full_name, str) and symbol_full_name:
+                local_count = self._add_hop2_candidates(
+                    seed_index,
+                    self.docs_by_symbol_full_name.get(symbol_full_name, []),
+                    anchor_weights["symbol_full_name"],
+                    local_selected,
+                    local_count,
+                    max_per_seed,
+                    anchor_scores,
+                )
+
+            symbol_name = meta.get("symbol_name")
+            if isinstance(symbol_name, str) and symbol_name:
+                local_count = self._add_hop2_candidates(
+                    seed_index,
+                    self.docs_by_file_symbol_name.get((file_path, symbol_name), []),
+                    anchor_weights["symbol_name"],
+                    local_selected,
+                    local_count,
+                    max_per_seed,
+                    anchor_scores,
+                )
+
+            parent_symbol = meta.get("parent_symbol")
+            if isinstance(parent_symbol, str) and parent_symbol:
+                local_count = self._add_hop2_candidates(
+                    seed_index,
+                    self.docs_by_file_parent_symbol.get((file_path, parent_symbol), []),
+                    anchor_weights["parent_symbol"],
+                    local_selected,
+                    local_count,
+                    max_per_seed,
+                    anchor_scores,
+                )
+
+            if self._supports_neighbor_expansion(seed_doc):
+                file_indices = self.docs_by_file.get(file_path, [])
+                file_positions = self.doc_position_in_file.get(file_path, {})
+                position = file_positions.get(seed_index)
+                if position is not None:
+                    neighbor_candidates: List[int] = []
+                    for offset in range(1, neighbor_window + 1):
+                        left_position = position - offset
+                        right_position = position + offset
+                        if left_position >= 0:
+                            neighbor_candidates.append(file_indices[left_position])
+                        if right_position < len(file_indices):
+                            neighbor_candidates.append(file_indices[right_position])
+
+                    local_count = self._add_hop2_candidates(
+                        seed_index,
+                        neighbor_candidates,
+                        anchor_weights["same_file_neighbor"],
+                        local_selected,
+                        local_count,
+                        max_per_seed,
+                        anchor_scores,
+                    )
+
+        return anchor_scores
+
+    @staticmethod
+    def _compare_final_entries(left: Dict[str, Any], right: Dict[str, Any]) -> int:
+        if left["final_score"] != right["final_score"]:
+            return -1 if left["final_score"] > right["final_score"] else 1
+        if left["is_seed"] != right["is_seed"]:
+            return -1 if left["is_seed"] else 1
+        if left["hop1_rank"] != right["hop1_rank"]:
+            return -1 if left["hop1_rank"] < right["hop1_rank"] else 1
+        if left["file_path"] == right["file_path"] and left["start_line"] != right["start_line"]:
+            return -1 if left["start_line"] < right["start_line"] else 1
+        if left["candidate_order"] != right["candidate_order"]:
+            return -1 if left["candidate_order"] < right["candidate_order"] else 1
+        if left["doc_index"] != right["doc_index"]:
+            return -1 if left["doc_index"] < right["doc_index"] else 1
+        return 0
+
+    def _final_rerank(
+        self,
+        hop1_indices: List[int],
+        semantic_scores: Dict[int, float],
+        seed_indices: List[int],
+        anchor_scores: Dict[int, float],
+        multi_hop_cfg: Dict[str, Any],
+    ) -> List[int]:
+        seed_set = set(seed_indices)
+        hop1_rank = {doc_index: rank for rank, doc_index in enumerate(hop1_indices)}
+        candidate_indices = list(dict.fromkeys(hop1_indices + list(anchor_scores.keys())))
+
+        entries = []
+        for candidate_order, doc_index in enumerate(candidate_indices):
+            doc = self.doc_index_map[doc_index]
+            meta = self._get_doc_meta(doc)
+            semantic_score = semantic_scores.get(doc_index, 0.0)
+            anchor_score = anchor_scores.get(doc_index, 0.0)
+            seed_bonus = 1.0 if doc_index in seed_set else 0.0
+            final_score = (
+                multi_hop_cfg["final_semantic_weight"] * semantic_score
+                + multi_hop_cfg["final_anchor_weight"] * anchor_score
+                + multi_hop_cfg["final_seed_weight"] * seed_bonus
+            )
+
+            entries.append(
+                {
+                    "doc_index": doc_index,
+                    "final_score": final_score,
+                    "is_seed": doc_index in seed_set,
+                    "hop1_rank": hop1_rank.get(doc_index, 10**9),
+                    "file_path": meta.get("file_path"),
+                    "start_line": self._safe_int(meta.get("start_line"), 10**9) or 10**9,
+                    "candidate_order": candidate_order,
+                }
+            )
+
+        entries.sort(key=cmp_to_key(self._compare_final_entries))
+        final_top_k = multi_hop_cfg["final_top_k"]
+        return [entry["doc_index"] for entry in entries[:final_top_k]]
 
     def _validate_and_filter_embeddings(self, documents: List) -> List:
         """
@@ -378,12 +729,13 @@ IMPORTANT FORMATTING RULES:
             raise ValueError("No valid documents with embeddings found. Cannot create retriever.")
 
         logger.info(f"Using {len(self.transformed_docs)} documents with valid embeddings for retrieval")
+        self._build_document_indices()
 
         try:
             # Use the appropriate embedder for retrieval
             retrieve_embedder = self.query_embedder if self.is_ollama_embedder else self.embedder
             self.retriever = FAISSRetriever(
-                **configs["retriever"],
+                **self._get_faiss_retriever_config(),
                 embedder=retrieve_embedder,
                 documents=self.transformed_docs,
                 document_map_func=lambda doc: doc.vector,
