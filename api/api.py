@@ -400,6 +400,10 @@ app.add_api_route("/chat/completions/stream", chat_completions_stream, methods=[
 # Add the WebSocket endpoint
 app.add_api_websocket_route("/ws/chat", handle_websocket_chat)
 
+# Add the agent wiki WebSocket endpoint (subtask 12 — path B)
+from api.agent.wiki_generator import handle_agent_wiki_websocket  # noqa: E402
+app.add_api_websocket_route("/ws/agent-wiki", handle_agent_wiki_websocket)
+
 # --- Wiki Cache Helper Functions ---
 
 WIKI_CACHE_DIR = os.path.join(get_adalflow_default_root_path(), "wikicache")
