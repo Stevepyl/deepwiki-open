@@ -135,7 +135,17 @@ _SLUG_RE = re.compile(r"[^a-z0-9]+")
 
 
 def compute_repo_meta(repo_url: str, repo_type: str) -> tuple[str, str]:
-    """Return (repo_name, repo_path). Mirrors wiki_generator._compute_repo_name/path."""
+    """Return (repo_name, repo_path).
+
+    For local repos, repo_path is the user-supplied absolute path — DatabaseManager
+    keeps local repos at the original filesystem location (no copy to ~/.adalflow/repos/).
+    For remote repos, mirrors wiki_generator._compute_repo_path logic.
+    """
+    if repo_type == "local":
+        repo_path = os.path.abspath(os.path.expanduser(repo_url))
+        repo_name = os.path.basename(repo_path.rstrip(os.sep)) or "local-repo"
+        return repo_name, repo_path
+
     parts = repo_url.rstrip("/").split("/")
     if repo_type in ("github", "gitlab", "bitbucket") and len(parts) >= 5:
         owner = parts[-2]
@@ -364,6 +374,11 @@ async def run_wiki_command(
     )
     if structure is None:
         return
+
+    # Clear stale pages from prior runs AFTER planner succeeds so a failed
+    # planner run leaves the previous good output intact.
+    for stale in output_dir.glob("*.md"):
+        stale.unlink()
 
     pages = _flatten_pages_in_section_order(structure)
     for i, page in enumerate(pages):
