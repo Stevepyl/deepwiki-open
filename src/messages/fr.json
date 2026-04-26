@@ -22,7 +22,7 @@
       "welcomeTagline": "Documentation propulsée par l’IA pour vos dépôts de code",
       "description": "Générez une documentation complète à partir de dépôts GitHub, GitLab ou Bitbucket en quelques clics.",
       "quickStart": "Démarrage rapide",
-      "enterRepoUrl": "Entrez une URL de dépôt dans l’un des formats suivants :",
+      "enterRepoUrl": "Entrez une URL GitHub/GitLab/Bitbucket, propriétaire/dépôt ou un chemin de dossier local :",
       "advancedVisualization": "Visualisation avancée avec des diagrammes Mermaid",
       "diagramDescription": "DeepWiki génère automatiquement des diagrammes interactifs pour vous aider à comprendre la structure du code et ses relations :",
       "flowDiagram": "Diagramme de flux",
@@ -31,7 +31,7 @@
     "form": {
       "repository": "Dépôt",
       "configureWiki": "Configurer le Wiki",
-      "repoPlaceholder": "propriétaire/dépôt ou URL GitHub/GitLab/Bitbucket",
+      "repoPlaceholder": "URL GitHub, propriétaire/dépôt ou chemin local",
       "wikiLanguage": "Langue du Wiki",
       "modelOptions": "Options du Modèle",
       "modelProvider": "Fournisseur du Modèle",

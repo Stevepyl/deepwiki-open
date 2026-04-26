@@ -22,7 +22,7 @@
     "welcomeTagline": "Documentação com IA para seus repositórios de código",
     "description": "Gere documentação completa a partir de repositórios GitHub, GitLab ou Bitbucket com apenas alguns cliques.",
     "quickStart": "Início Rápido",
-    "enterRepoUrl": "Digite uma URL de repositório em um destes formatos:",
+    "enterRepoUrl": "Digite uma URL do GitHub/GitLab/Bitbucket, proprietário/repo ou caminho de pasta local:",
     "advancedVisualization": "Visualização Avançada com Diagramas Mermaid",
     "diagramDescription": "O DeepWiki gera automaticamente diagramas interativos para ajudar você a entender a estrutura e os relacionamentos do código:",
     "flowDiagram": "Diagrama de Fluxo",
@@ -31,7 +31,7 @@
   "form": {
     "repository": "Repositório",
     "configureWiki": "Configurar Wiki",
-    "repoPlaceholder": "proprietário/repo ou URL do GitHub/GitLab/Bitbucket",
+    "repoPlaceholder": "URL do GitHub, proprietário/repo ou caminho local",
     "wikiLanguage": "Idioma da Wiki",
     "modelOptions": "Opções de Modelo",
     "modelProvider": "Provedor de Modelo",

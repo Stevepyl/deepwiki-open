@@ -6,9 +6,10 @@ import { AskHistoryItem } from '@/types/ask';
 
 interface AskResultViewProps {
   item: AskHistoryItem;
+  onCitationClick?: (itemId: string, citationIndex: number) => void;
 }
 
-const AskResultView: React.FC<AskResultViewProps> = ({ item }) => {
+const AskResultView: React.FC<AskResultViewProps> = ({ item, onCitationClick }) => {
   const downloadResponse = () => {
     if (!item.response.trim()) {
       return;
@@ -44,7 +45,11 @@ const AskResultView: React.FC<AskResultViewProps> = ({ item }) => {
           </div>
         ) : item.response ? (
           <div className="prose prose-sm md:prose-base lg:prose-lg max-w-none">
-            <Markdown content={item.response} />
+            <Markdown
+              content={item.response}
+              citationCount={item.citations.length}
+              onCitationClick={(citationIndex) => onCitationClick?.(item.id, citationIndex)}
+            />
           </div>
         ) : (
           <div className="flex items-center gap-2 text-sm text-gray-500">

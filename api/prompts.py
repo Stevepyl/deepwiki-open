@@ -18,6 +18,8 @@ FORMAT YOUR RESPONSE USING MARKDOWN:
 - Format tables using markdown table syntax when presenting structured data
 - Use **bold** and *italic* for emphasis
 - When referencing file paths, use `inline code` formatting
+- When context contains numbered evidence blocks such as [Evidence 1], cite factual claims with inline markers like [1], [2].
+- If the provided evidence is insufficient, say that clearly instead of guessing.
 
 IMPORTANT FORMATTING RULES:
 1. DO NOT include ```markdown fences at the beginning or end of your answer
@@ -45,8 +47,11 @@ You: {{dialog_turn.assistant_response.response_str}}
 {% if contexts %}
 <START_OF_CONTEXT>
 {% for context in contexts %}
-{{loop.index}}.
+Evidence {{loop.index}}.
 File Path: {{context.meta_data.get('file_path', 'unknown')}}
+{% if context.meta_data.get('start_line') and context.meta_data.get('end_line') %}Lines: {{context.meta_data.get('start_line')}}-{{context.meta_data.get('end_line')}}
+{% endif %}{% if context.meta_data.get('symbol_full_name') or context.meta_data.get('symbol_name') %}Symbol: {{context.meta_data.get('symbol_full_name') or context.meta_data.get('symbol_name')}}
+{% endif %}
 Content: {{context.text}}
 {% endfor %}
 <END_OF_CONTEXT>
@@ -79,6 +84,8 @@ IMPORTANT:You MUST respond in {language_name} language.
 - Your research MUST directly address the original question
 - NEVER respond with just "Continue the research" as an answer - always provide substantive research findings
 - Remember that this topic will be maintained across all research iterations
+- When using retrieved context blocks labeled [Evidence N], cite claims with inline markers like [N]
+- If the retrieved evidence is insufficient for part of the answer, say so clearly
 </guidelines>
 
 <style>
@@ -109,6 +116,8 @@ IMPORTANT:You MUST respond in {language_name} language.
 - NEVER respond with "Continue the research" as an answer - always provide a complete conclusion
 - If the topic is about a specific file or feature (like "Dockerfile"), focus ONLY on that file or feature
 - Ensure your conclusion builds on and references key findings from previous iterations
+- When using retrieved context blocks labeled [Evidence N], cite claims with inline markers like [N]
+- If the retrieved evidence is insufficient for part of the answer, say so clearly
 </guidelines>
 
 <style>
@@ -141,6 +150,8 @@ IMPORTANT:You MUST respond in {language_name} language.
 - NEVER respond with just "Continue the research" as an answer - always provide substantive research findings
 - Your research MUST directly address the original question
 - Maintain continuity with previous research iterations - this is a continuous investigation
+- When using retrieved context blocks labeled [Evidence N], cite claims with inline markers like [N]
+- If the retrieved evidence is insufficient for part of the answer, say so clearly
 </guidelines>
 
 <style>
@@ -181,6 +192,8 @@ This file contains...
 - Start with the most relevant information that directly addresses the user's query
 - Be precise and technical when discussing code
 - Your response language should be in the same language as the user's query
+- When using retrieved context blocks labeled [Evidence N], cite claims with inline markers like [N]
+- If the retrieved evidence is insufficient for part of the answer, say so clearly
 </guidelines>
 
 <style>

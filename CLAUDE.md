@@ -44,7 +44,17 @@ pytest tests/integration/  # Integration tests
 pytest tests/api/          # API endpoint tests
 pytest tests/ -v -k unit   # Verbose with marker filter
 ```
+## Environment
 
+This repository must use the Conda environment `deepwiki`.
+
+Do not assume the default system Python is correct.
+
+Always prefer explicit environment-bound commands, for example:
+
+- `conda run -n deepwiki python ...`
+- `conda run -n deepwiki python -m pip install -r requirements.txt`
+- `conda run -n deepwiki python -m pytest`
 ## Environment Setup
 
 Copy `.env.example` to `.env` in project root. Key variables:

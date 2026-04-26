@@ -8,9 +8,25 @@ import Mermaid from './Mermaid';
 
 interface MarkdownProps {
   content: string;
+  citationCount?: number;
+  onCitationClick?: (citationIndex: number) => void;
 }
 
-const Markdown: React.FC<MarkdownProps> = ({ content }) => {
+const Markdown: React.FC<MarkdownProps> = ({ content, citationCount = 0, onCitationClick }) => {
+  const contentWithCitationLinks = React.useMemo(() => {
+    if (!citationCount) {
+      return content;
+    }
+
+    return content.replace(/\[(\d+)\]/g, (match, citationNumber) => {
+      const citationIndex = Number.parseInt(citationNumber, 10);
+      if (!Number.isInteger(citationIndex) || citationIndex < 1 || citationIndex > citationCount) {
+        return match;
+      }
+      return `[${citationNumber}](citation:${citationNumber})`;
+    });
+  }, [citationCount, content]);
+
   // Define markdown components
   const MarkdownComponents: React.ComponentProps<typeof ReactMarkdown>['components'] = {
     p({ children, ...props }: { children?: React.ReactNode }) {
@@ -58,6 +74,19 @@ const Markdown: React.FC<MarkdownProps> = ({ content }) => {
       return <li className="mb-2 text-sm leading-relaxed dark:text-white" {...props}>{children}</li>;
     },
     a({ children, href, ...props }: { children?: React.ReactNode; href?: string }) {
+      if (href?.startsWith('citation:')) {
+        const citationIndex = Number.parseInt(href.slice('citation:'.length), 10);
+        return (
+          <button
+            type="button"
+            className="inline-flex items-center rounded border border-blue-200 bg-blue-50 px-1.5 py-0.5 font-mono text-xs font-semibold text-blue-700 hover:border-blue-400 hover:bg-blue-100 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-300"
+            onClick={() => onCitationClick?.(citationIndex)}
+          >
+            {children}
+          </button>
+        );
+      }
+
       return (
         <a
           href={href}
@@ -199,7 +228,7 @@ const Markdown: React.FC<MarkdownProps> = ({ content }) => {
         rehypePlugins={[rehypeRaw]}
         components={MarkdownComponents}
       >
-        {content}
+        {contentWithCitationLinks}
       </ReactMarkdown>
     </div>
   );

@@ -144,7 +144,19 @@ class ModelConfig(BaseModel):
 class AuthorizationConfig(BaseModel):
     code: str = Field(..., description="Authorization code")
 
+class RagPrepareRequest(BaseModel):
+    repo_url: str = Field(..., description="URL or local path of the repository to prepare")
+    token: Optional[str] = Field(None, description="Personal access token for private repositories")
+    type: Optional[str] = Field("github", description="Repository type")
+    provider: Optional[str] = Field("google", description="Model provider")
+    model: Optional[str] = Field(None, description="Model name for the specified provider")
+    excluded_dirs: Optional[str] = Field(None, description="Comma- or newline-separated directories to exclude")
+    excluded_files: Optional[str] = Field(None, description="Comma- or newline-separated file patterns to exclude")
+    included_dirs: Optional[str] = Field(None, description="Comma- or newline-separated directories to include")
+    included_files: Optional[str] = Field(None, description="Comma- or newline-separated file patterns to include")
+
 from api.config import configs, WIKI_AUTH_MODE, WIKI_AUTH_CODE
+from api.rag_cache import get_prepared_rag, parse_filter_list
 
 @app.get("/lang/config")
 async def get_lang_config():
@@ -163,6 +175,37 @@ async def validate_auth_code(request: AuthorizationConfig):
     Check authorization code.
     """
     return {"success": WIKI_AUTH_CODE == request.code}
+
+
+@app.post("/api/rag/prepare")
+async def prepare_rag(request: RagPrepareRequest):
+    """
+    Prepare and cache a repository retriever for later chat requests.
+    """
+    try:
+        prepared_rag = get_prepared_rag(
+            repo_url=request.repo_url,
+            repo_type=request.type,
+            token=request.token,
+            provider=request.provider,
+            model=request.model,
+            excluded_dirs=parse_filter_list(request.excluded_dirs),
+            excluded_files=parse_filter_list(request.excluded_files),
+            included_dirs=parse_filter_list(request.included_dirs),
+            included_files=parse_filter_list(request.included_files),
+        )
+        return {
+            "cache_hit": prepared_rag.cache_hit,
+            "documents_count": prepared_rag.documents_count,
+            "prepare_latency_sec": prepared_rag.prepare_latency_sec,
+        }
+    except ValueError as e:
+        logger.error(f"ValueError preparing RAG cache: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error preparing retriever: {str(e)}")
+    except Exception as e:
+        logger.error(f"Error preparing RAG cache: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error preparing retriever: {str(e)}")
+
 
 @app.get("/models/config", response_model=ModelConfig)
 async def get_model_config():

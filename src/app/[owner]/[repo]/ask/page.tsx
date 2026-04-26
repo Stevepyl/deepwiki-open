@@ -2,9 +2,10 @@
 
 import AskComposer, { AskSubmitOptions } from '@/components/AskComposer';
 import AskResultView from '@/components/AskResultView';
+import CitationPanel from '@/components/CitationPanel';
 import ThemeToggle from '@/components/theme-toggle';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { AskHistoryItem } from '@/types/ask';
+import { AskCitation, AskHistoryItem } from '@/types/ask';
 import { RepoInfo } from '@/types/repoinfo';
 import getRepoUrl from '@/utils/getRepoUrl';
 import { createChatWebSocket, closeWebSocket, ChatCompletionRequest } from '@/utils/websocketClient';
@@ -28,6 +29,35 @@ interface Message {
   role: 'user' | 'assistant' | 'system';
   content: string;
 }
+
+type StreamMessage =
+  | { type: 'citations'; data: AskCitation[] }
+  | { type: 'token'; data: string }
+  | { type: 'done' };
+
+interface ActiveCitationContext {
+  itemId: string;
+  citationIndex: number | null;
+}
+
+const parseStreamMessage = (payload: string): StreamMessage | null => {
+  try {
+    const parsed = JSON.parse(payload) as Partial<StreamMessage>;
+    if (parsed.type === 'citations' && Array.isArray(parsed.data)) {
+      return { type: 'citations', data: parsed.data as AskCitation[] };
+    }
+    if (parsed.type === 'token' && typeof parsed.data === 'string') {
+      return { type: 'token', data: parsed.data };
+    }
+    if (parsed.type === 'done') {
+      return { type: 'done' };
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+};
 
 const checkIfResearchComplete = (content: string): boolean => {
   if (content.includes('## Final Conclusion')) {
@@ -107,6 +137,7 @@ export default function AskPage() {
   const [selectedModel, setSelectedModel] = useState(modelParam);
   const [isCustomSelectedModel, setIsCustomSelectedModel] = useState(isCustomModelParam);
   const [customSelectedModel, setCustomSelectedModel] = useState(customModelParam);
+  const [activeCitationContext, setActiveCitationContext] = useState<ActiveCitationContext | null>(null);
 
   const activeRunsRef = useRef<Map<string, number>>(new Map());
   const webSocketsRef = useRef<Map<string, WebSocket | null>>(new Map());
@@ -127,6 +158,39 @@ export default function AskPage() {
     webSocketsRef.current.delete(itemId);
   };
 
+  const applyIncomingStreamMessage = (
+    itemId: string,
+    rawMessage: string,
+    currentResponse: string
+  ): string => {
+    const streamMessage = parseStreamMessage(rawMessage);
+
+    if (streamMessage?.type === 'citations') {
+      updateHistoryItem(itemId, (item) => ({
+        ...item,
+        citations: streamMessage.data,
+      }));
+      setActiveCitationContext({ itemId, citationIndex: null });
+      return currentResponse;
+    }
+
+    if (streamMessage?.type === 'done') {
+      return currentResponse;
+    }
+
+    const token = streamMessage?.type === 'token' ? streamMessage.data : rawMessage;
+    if (!token) {
+      return currentResponse;
+    }
+
+    const nextResponse = currentResponse + token;
+    updateHistoryItem(itemId, (item) => ({
+      ...item,
+      response: nextResponse,
+    }));
+    return nextResponse;
+  };
+
   const buildRequestBody = (item: AskHistoryItem, messageHistory: Message[]): ChatCompletionRequest => {
     const requestBody: ChatCompletionRequest = {
       repo_url: getRepoUrl(repoInfo),
@@ -137,7 +201,8 @@ export default function AskPage() {
       })),
       provider: item.provider,
       model: item.isCustomModel ? item.customModel : item.model,
-      language: item.language
+      language: item.language,
+      include_citations: true
     };
 
     if (repoInfo.token) {
@@ -171,6 +236,7 @@ export default function AskPage() {
 
     const decoder = new TextDecoder();
     let fullResponse = '';
+    let pendingLine = '';
 
     while (true) {
       const { done, value } = await reader.read();
@@ -182,11 +248,35 @@ export default function AskPage() {
         return fullResponse;
       }
 
-      fullResponse += decoder.decode(value, { stream: true });
-      updateHistoryItem(itemId, (item) => ({
-        ...item,
-        response: fullResponse,
-      }));
+      const decodedChunk = decoder.decode(value, { stream: true });
+      if (!requestBody.include_citations) {
+        fullResponse = applyIncomingStreamMessage(itemId, decodedChunk, fullResponse);
+        continue;
+      }
+
+      pendingLine += decodedChunk;
+      const lines = pendingLine.split(/\r?\n/);
+      pendingLine = lines.pop() || '';
+
+      for (const line of lines) {
+        const trimmedLine = line.trim();
+        if (!trimmedLine) {
+          continue;
+        }
+
+        const payload = trimmedLine.startsWith('data:')
+          ? trimmedLine.slice('data:'.length).trim()
+          : trimmedLine;
+        fullResponse = applyIncomingStreamMessage(itemId, payload, fullResponse);
+      }
+    }
+
+    const remaining = pendingLine.trim();
+    if (remaining && activeRunsRef.current.get(itemId) === runId) {
+      const payload = remaining.startsWith('data:')
+        ? remaining.slice('data:'.length).trim()
+        : remaining;
+      fullResponse = applyIncomingStreamMessage(itemId, payload, fullResponse);
     }
 
     return fullResponse;
@@ -225,11 +315,7 @@ export default function AskPage() {
             return;
           }
 
-          fullResponse += message;
-          updateHistoryItem(itemId, (item) => ({
-            ...item,
-            response: fullResponse,
-          }));
+          fullResponse = applyIncomingStreamMessage(itemId, message, fullResponse);
         },
         () => {
           if (fallbackInProgress || resolved || activeRunsRef.current.get(itemId) !== runId) {
@@ -262,10 +348,12 @@ export default function AskPage() {
       ...currentItem,
       status: 'loading',
       response: '',
+      citations: [],
       error: null,
       researchIteration: 0,
       researchComplete: false,
     }));
+    setActiveCitationContext({ itemId: item.id, citationIndex: null });
 
     try {
       let messageHistory: Message[] = [{
@@ -295,6 +383,7 @@ export default function AskPage() {
         updateHistoryItem(item.id, (currentItem) => ({
           ...currentItem,
           response: '',
+          citations: [],
           researchIteration: iteration,
         }));
 
@@ -354,6 +443,7 @@ export default function AskPage() {
       deepResearch: options.deepResearch,
       status: 'loading',
       response: '',
+      citations: [],
       error: null,
       researchIteration: 0,
       researchComplete: false,
@@ -505,6 +595,17 @@ export default function AskPage() {
   }, []);
 
   const lastHistoryItem = history[history.length - 1];
+  const activeCitationItem = activeCitationContext
+    ? history.find((item) => item.id === activeCitationContext.itemId) || lastHistoryItem
+    : lastHistoryItem;
+  const activeCitations = activeCitationItem?.citations || [];
+  const activeCitationIndex = activeCitationContext && activeCitationContext.itemId === activeCitationItem?.id
+    ? activeCitationContext.citationIndex
+    : null;
+
+  const handleCitationClick = (itemId: string, citationIndex: number) => {
+    setActiveCitationContext({ itemId, citationIndex });
+  };
 
   useEffect(() => {
     if (!lastHistoryItem) {
@@ -544,20 +645,37 @@ export default function AskPage() {
       </header>
 
       <main
-        className="max-w-[95%] xl:max-w-[1400px] mx-auto space-y-4"
+        className="max-w-[95%] xl:max-w-[1400px] mx-auto grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_360px] gap-4"
         style={{ paddingBottom: `${composerHeight + 24}px` }}
       >
-        {history.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-gray-300 bg-white p-10 text-center text-gray-400">
-            Enter a question above to view the answer.
-          </div>
-        ) : (
-          history.map((item) => (
-            <AskResultView key={item.id} item={item} />
-          ))
-        )}
+        <section className="space-y-4 min-w-0">
+          {history.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-gray-300 bg-white p-10 text-center text-gray-400">
+              Enter a question above to view the answer.
+            </div>
+          ) : (
+            history.map((item) => (
+              <AskResultView
+                key={item.id}
+                item={item}
+                onCitationClick={handleCitationClick}
+              />
+            ))
+          )}
 
-        <div ref={bottomRef} />
+          <div ref={bottomRef} />
+        </section>
+
+        <CitationPanel
+          citations={activeCitations}
+          activeCitationIndex={activeCitationIndex}
+          onCitationSelect={(citationIndex) => {
+            if (!activeCitationItem) {
+              return;
+            }
+            setActiveCitationContext({ itemId: activeCitationItem.id, citationIndex });
+          }}
+        />
       </main>
 
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white/95 backdrop-blur">

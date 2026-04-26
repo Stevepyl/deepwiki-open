@@ -69,6 +69,159 @@ DEFAULT_MULTI_HOP_CONFIG = {
     "anchor_weights": DEFAULT_MULTI_HOP_ANCHOR_WEIGHTS,
 }
 
+DEFAULT_HYBRID_RETRIEVAL_CONFIG = {
+    "enabled": True,
+    "exact_enabled": True,
+    "sparse_enabled": True,
+    "exact_top_k": 12,
+    "sparse_top_k": 24,
+    "rrf_k": 60,
+    "max_candidates": 48,
+    "max_query_tokens": 16,
+}
+
+QUERY_STOPWORDS = {
+    "a",
+    "an",
+    "and",
+    "are",
+    "as",
+    "at",
+    "be",
+    "by",
+    "can",
+    "code",
+    "does",
+    "for",
+    "from",
+    "how",
+    "in",
+    "is",
+    "it",
+    "of",
+    "on",
+    "or",
+    "repo",
+    "repository",
+    "the",
+    "this",
+    "to",
+    "what",
+    "where",
+    "which",
+    "who",
+    "why",
+    "with",
+}
+
+
+def format_retrieved_documents_for_prompt(
+    documents: List[Any],
+    max_total_chars: int = 24000,
+    max_doc_chars: int = 4000,
+) -> str:
+    """
+    Format retrieved documents as numbered evidence blocks for the LLM prompt.
+
+    The chat endpoints stream plain text, so this helper keeps provenance inside
+    the prompt itself: the model can cite evidence as [1], [2], etc.
+    """
+    parts: List[str] = []
+    total_chars = 0
+
+    for evidence_idx, doc in enumerate(documents, start=1):
+        meta = getattr(doc, "meta_data", {}) or {}
+        file_path = meta.get("file_path", "unknown")
+        start_line = meta.get("start_line")
+        end_line = meta.get("end_line")
+        symbol = (
+            meta.get("symbol_full_name")
+            or meta.get("symbol_name")
+            or meta.get("title")
+        )
+        chunk_type = meta.get("ast_type") or meta.get("type")
+
+        header_parts = [f"[Evidence {evidence_idx}]", f"File Path: {file_path}"]
+        if start_line is not None and end_line is not None:
+            header_parts.append(f"Lines: {start_line}-{end_line}")
+        if symbol:
+            header_parts.append(f"Symbol: {symbol}")
+        if chunk_type:
+            header_parts.append(f"Type: {chunk_type}")
+
+        text = str(getattr(doc, "text", "") or "")
+        if len(text) > max_doc_chars:
+            text = text[:max_doc_chars].rstrip() + "\n...[truncated]"
+
+        block = " | ".join(header_parts) + "\n" + text.strip()
+        if not block.strip():
+            continue
+
+        next_total = total_chars + len(block)
+        if next_total > max_total_chars:
+            remaining = max_total_chars - total_chars
+            if remaining > 600:
+                parts.append(block[:remaining].rstrip() + "\n...[context truncated]")
+            break
+
+        parts.append(block)
+        total_chars = next_total
+
+    return "\n\n---\n\n".join(parts)
+
+
+def _safe_line_number(value: Any) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
+def build_citations_from_retrieved_documents(
+    documents: List[Any],
+    max_snippet_chars: int = 1000,
+) -> List[Dict[str, Any]]:
+    """
+    Build structured citation metadata from the same retrieved documents used
+    as evidence in the prompt. Citation indexes are 1-based and match the
+    [Evidence N] blocks produced by format_retrieved_documents_for_prompt.
+    """
+    citations: List[Dict[str, Any]] = []
+    total = len(documents)
+
+    for evidence_idx, doc in enumerate(documents, start=1):
+        meta = getattr(doc, "meta_data", {}) or {}
+        symbol = (
+            meta.get("symbol_full_name")
+            or meta.get("symbol_name")
+            or meta.get("title")
+            or ""
+        )
+        chunk_type = meta.get("ast_type") or meta.get("type") or ""
+        text = str(getattr(doc, "text", "") or "")
+        snippet = text.strip()
+        if len(snippet) > max_snippet_chars:
+            snippet = snippet[:max_snippet_chars].rstrip() + "\n...[truncated]"
+
+        score = 1.0
+        if total > 1:
+            score = (total - evidence_idx) / (total - 1)
+
+        citations.append(
+            {
+                "index": evidence_idx,
+                "file_path": str(meta.get("file_path") or "unknown"),
+                "start_line": _safe_line_number(meta.get("start_line")),
+                "end_line": _safe_line_number(meta.get("end_line")),
+                "symbol": str(symbol),
+                "chunk_type": str(chunk_type),
+                "score": round(score, 6),
+                "snippet": snippet,
+            }
+        )
+
+    return citations
+
 class Memory(adal.core.component.DataComponent):
     """Simple conversation management with a list of dialog turns."""
 
@@ -271,6 +424,8 @@ IMPORTANT FORMATTING RULES:
         self.docs_by_file_symbol_name = {}
         self.docs_by_file_parent_symbol = {}
         self.doc_position_in_file = {}
+        self.doc_metadata_texts = {}
+        self.doc_sparse_tokens = {}
 
     @staticmethod
     def _safe_int(value: Any, default: int | None = None) -> int | None:
@@ -293,7 +448,24 @@ IMPORTANT FORMATTING RULES:
         retriever_cfg = self._get_retriever_config()
         retriever_cfg.pop("symbol_alpha", None)
         retriever_cfg.pop("multi_hop", None)
+        retriever_cfg.pop("hybrid", None)
         return retriever_cfg
+
+    def _get_hybrid_retrieval_config(self) -> Dict[str, Any]:
+        retriever_cfg = self._get_retriever_config()
+        raw_cfg = retriever_cfg.get("hybrid") or {}
+
+        config = dict(DEFAULT_HYBRID_RETRIEVAL_CONFIG)
+        config.update(raw_cfg)
+        config["enabled"] = bool(config.get("enabled", True))
+        config["exact_enabled"] = bool(config.get("exact_enabled", True))
+        config["sparse_enabled"] = bool(config.get("sparse_enabled", True))
+        config["exact_top_k"] = max(1, self._safe_int(config.get("exact_top_k"), 12) or 12)
+        config["sparse_top_k"] = max(1, self._safe_int(config.get("sparse_top_k"), 24) or 24)
+        config["rrf_k"] = max(1, self._safe_int(config.get("rrf_k"), 60) or 60)
+        config["max_candidates"] = max(1, self._safe_int(config.get("max_candidates"), 48) or 48)
+        config["max_query_tokens"] = max(1, self._safe_int(config.get("max_query_tokens"), 16) or 16)
+        return config
 
     def _get_multi_hop_config(self) -> Dict[str, Any]:
         retriever_cfg = self._get_retriever_config()
@@ -325,14 +497,18 @@ IMPORTANT FORMATTING RULES:
 
     def _doc_ast_chunk_index(self, doc_index: int) -> int:
         meta = self._get_doc_meta(self.doc_index_map[doc_index])
-        return self._safe_int(meta.get("ast_chunk_index"), 10**9) or 10**9
+        value = self._safe_int(meta.get("ast_chunk_index"), 10**9)
+        return value if value is not None else 10**9
 
     def _doc_start_line(self, doc_index: int) -> int:
         meta = self._get_doc_meta(self.doc_index_map[doc_index])
-        return self._safe_int(meta.get("start_line"), 10**9) or 10**9
+        value = self._safe_int(meta.get("start_line"), 10**9)
+        return value if value is not None else 10**9
 
     def _build_document_indices(self) -> None:
         self.doc_index_map = {idx: doc for idx, doc in enumerate(self.transformed_docs)}
+        self.doc_metadata_texts = {}
+        self.doc_sparse_tokens = {}
 
         docs_by_file = defaultdict(list)
         docs_by_symbol_full_name = defaultdict(list)
@@ -341,6 +517,11 @@ IMPORTANT FORMATTING RULES:
 
         for idx, doc in self.doc_index_map.items():
             meta = self._get_doc_meta(doc)
+            metadata_text = self._metadata_search_text(doc)
+            full_text = f"{metadata_text}\n{getattr(doc, 'text', '') or ''}"
+            self.doc_metadata_texts[idx] = metadata_text.lower()
+            self.doc_sparse_tokens[idx] = set(self._extract_search_tokens(full_text))
+
             file_path = meta.get("file_path")
             if isinstance(file_path, str) and file_path:
                 docs_by_file[file_path].append(idx)
@@ -387,6 +568,199 @@ IMPORTANT FORMATTING RULES:
         query_lc = query.lower()
         return [token for token in re.split(r"[^0-9a-zA-Z_]+", query_lc) if token]
 
+    @staticmethod
+    def _split_identifier_token(token: str) -> List[str]:
+        spaced = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", token)
+        spaced = re.sub(r"[^0-9a-zA-Z]+", " ", spaced.replace("_", " "))
+        return [part.lower() for part in spaced.split() if part]
+
+    @classmethod
+    def _extract_search_tokens(cls, text: str) -> List[str]:
+        tokens: List[str] = []
+        for raw in re.findall(r"[A-Za-z_][A-Za-z0-9_]*|\d+", text or ""):
+            raw_lc = raw.lower()
+            if len(raw_lc) > 1:
+                tokens.append(raw_lc)
+            tokens.extend(cls._split_identifier_token(raw))
+        return [
+            token
+            for token in dict.fromkeys(tokens)
+            if len(token) > 1 and token not in QUERY_STOPWORDS
+        ]
+
+    @staticmethod
+    def _normalize_path(value: Any) -> str:
+        return str(value or "").replace("\\", "/").lower()
+
+    @staticmethod
+    def _metadata_search_text(doc: Any) -> str:
+        meta = RAG._get_doc_meta(doc)
+        keys = (
+            "file_path",
+            "title",
+            "module_path",
+            "symbol_name",
+            "parent_symbol",
+            "symbol_full_name",
+            "ast_type",
+            "type",
+        )
+        return "\n".join(str(meta.get(key) or "") for key in keys)
+
+    def _analyze_query(self, query: str, max_query_tokens: int) -> Dict[str, Any]:
+        quoted_terms = [
+            item.strip()
+            for item in re.findall(r"`([^`]+)`", query)
+            if item.strip()
+        ]
+        path_terms = [
+            item.strip()
+            for item in re.findall(r"[\w./\\-]+\.[A-Za-z0-9]+", query)
+            if item.strip()
+        ]
+        identifier_terms = [
+            item.strip()
+            for item in re.findall(
+                r"\b[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*\b",
+                query,
+            )
+            if item.strip()
+        ]
+
+        raw_terms = list(dict.fromkeys(quoted_terms + path_terms + identifier_terms))
+
+        query_tokens: List[str] = []
+        for term in raw_terms + [query]:
+            query_tokens.extend(self._extract_search_tokens(term))
+
+        return {
+            "raw_terms": raw_terms,
+            "path_terms": path_terms,
+            "tokens": list(dict.fromkeys(query_tokens))[:max_query_tokens],
+        }
+
+    @staticmethod
+    def _dedupe_indices(doc_indices: List[int]) -> List[int]:
+        return list(dict.fromkeys(doc_indices))
+
+    @staticmethod
+    def _rrf_fusion_index_lists(result_lists: List[List[int]], k: int) -> List[int]:
+        scores: Dict[int, float] = {}
+        first_seen: Dict[int, int] = {}
+        next_order = 0
+
+        for result_list in result_lists:
+            for rank, doc_index in enumerate(RAG._dedupe_indices(result_list)):
+                if doc_index not in first_seen:
+                    first_seen[doc_index] = next_order
+                    next_order += 1
+                scores[doc_index] = scores.get(doc_index, 0.0) + 1.0 / (k + rank + 1)
+
+        return [
+            doc_index
+            for doc_index, _ in sorted(
+                scores.items(),
+                key=lambda item: (-item[1], first_seen[item[0]], item[0]),
+            )
+        ]
+
+    def _exact_score_for_doc(self, doc: Any, query_analysis: Dict[str, Any]) -> float:
+        meta = self._get_doc_meta(doc)
+        symbol_fields = [
+            str(meta.get("symbol_full_name") or ""),
+            str(meta.get("symbol_name") or ""),
+            str(meta.get("parent_symbol") or ""),
+            str(meta.get("title") or ""),
+        ]
+        symbol_fields_lc = [field.lower() for field in symbol_fields if field]
+        file_path = self._normalize_path(meta.get("file_path"))
+        score = 0.0
+
+        for raw_term in query_analysis.get("raw_terms", []):
+            term_lc = str(raw_term).lower()
+            term_path = self._normalize_path(raw_term)
+            if not term_lc:
+                continue
+
+            if file_path and (file_path == term_path or file_path.endswith("/" + term_path)):
+                score = max(score, 3.0)
+            elif file_path and term_path in file_path:
+                score = max(score, 1.6)
+
+            if any(field == term_lc for field in symbol_fields_lc):
+                score = max(score, 3.0)
+            elif any(field.endswith("." + term_lc) for field in symbol_fields_lc):
+                score = max(score, 2.6)
+            elif any(term_lc in field for field in symbol_fields_lc):
+                score = max(score, 1.8)
+
+        metadata_text = self._metadata_search_text(doc).lower()
+        for token in query_analysis.get("tokens", []):
+            if token in metadata_text:
+                score += 0.25
+
+        return score
+
+    def _exact_retrieve(self, query_analysis: Dict[str, Any], top_k: int) -> List[int]:
+        scored: List[Tuple[int, float]] = []
+        for doc_index, doc in self.doc_index_map.items():
+            score = self._exact_score_for_doc(doc, query_analysis)
+            if score > 0:
+                scored.append((doc_index, score))
+
+        scored.sort(
+            key=lambda item: (
+                -item[1],
+                self._normalize_path(self._get_doc_meta(self.doc_index_map[item[0]]).get("file_path")),
+                self._doc_start_line(item[0]),
+                item[0],
+            )
+        )
+        return [doc_index for doc_index, _ in scored[:top_k]]
+
+    def _sparse_retrieve(self, query_analysis: Dict[str, Any], top_k: int) -> List[int]:
+        query_tokens = query_analysis.get("tokens", [])
+        if not query_tokens:
+            return []
+
+        doc_freq: Dict[str, int] = {token: 0 for token in query_tokens}
+        for token_set in self.doc_sparse_tokens.values():
+            for token in query_tokens:
+                if token in token_set:
+                    doc_freq[token] += 1
+
+        doc_count = max(len(self.doc_sparse_tokens), 1)
+        idf = {
+            token: 1.0 + (doc_count / (1 + doc_freq[token]))
+            for token in query_tokens
+            if doc_freq[token] > 0
+        }
+        if not idf:
+            return []
+
+        scored: List[Tuple[int, float]] = []
+        for doc_index, token_set in self.doc_sparse_tokens.items():
+            score = 0.0
+            metadata_text = self.doc_metadata_texts.get(doc_index, "")
+            for token, token_idf in idf.items():
+                if token not in token_set:
+                    continue
+                score += token_idf
+                if token in metadata_text:
+                    score += token_idf * 0.6
+            if score > 0:
+                scored.append((doc_index, score))
+
+        scored.sort(
+            key=lambda item: (
+                -item[1],
+                self._normalize_path(self._get_doc_meta(self.doc_index_map[item[0]]).get("file_path")),
+                self._doc_start_line(item[0]),
+                item[0],
+            )
+        )
+        return [doc_index for doc_index, _ in scored[:top_k]]
+
     def _symbol_score_for_doc(self, doc: Any, query_tokens: List[str]) -> float:
         meta = self._get_doc_meta(doc)
         candidates = []
@@ -402,9 +776,9 @@ IMPORTANT FORMATTING RULES:
         for candidate in candidates:
             for query_token in query_token_set:
                 if candidate == query_token:
-                    score = max(score, 1.0)
+                    score = max(score, 3.0)
                 elif query_token in candidate:
-                    score = max(score, 0.5)
+                    score = max(score, 1.5)
         return score
 
     def _rerank_hop1(self, doc_indices: List[int], query: str) -> Tuple[List[int], Dict[int, float]]:
@@ -590,7 +964,7 @@ IMPORTANT FORMATTING RULES:
                     "is_seed": doc_index in seed_set,
                     "hop1_rank": hop1_rank.get(doc_index, 10**9),
                     "file_path": meta.get("file_path"),
-                    "start_line": self._safe_int(meta.get("start_line"), 10**9) or 10**9,
+                    "start_line": self._doc_start_line(doc_index),
                     "candidate_order": candidate_order,
                 }
             )
@@ -765,15 +1139,17 @@ IMPORTANT FORMATTING RULES:
                 logger.error(f"Sample embedding sizes: {', '.join(sizes)}")
             raise
 
-    def call(self, query: str, language: str = "en") -> Tuple[List]:
+    def call(self, query: str, language: str = "en") -> List:
         """
-        Process a query using RAG.
+        Retrieve repository documents for a query and attach the selected
+        documents to the retriever result.
 
         Args:
             query: The user's query
 
         Returns:
-            Tuple of (RAGAnswer, retrieved_documents)
+            The retriever result list. The first result's `documents` field is
+            rewritten with the final hybrid and multi-hop ranked documents.
         """
         try:
             retrieved_documents = self.retriever(query)
@@ -791,6 +1167,29 @@ IMPORTANT FORMATTING RULES:
 
             if not self.doc_index_map:
                 self._build_document_indices()
+
+            hybrid_cfg = self._get_hybrid_retrieval_config()
+            if hybrid_cfg["enabled"]:
+                query_analysis = self._analyze_query(query, hybrid_cfg["max_query_tokens"])
+                result_lists = [doc_indices]
+
+                if hybrid_cfg["exact_enabled"]:
+                    exact_indices = self._exact_retrieve(
+                        query_analysis, hybrid_cfg["exact_top_k"]
+                    )
+                    if exact_indices:
+                        result_lists.append(exact_indices)
+
+                if hybrid_cfg["sparse_enabled"]:
+                    sparse_indices = self._sparse_retrieve(
+                        query_analysis, hybrid_cfg["sparse_top_k"]
+                    )
+                    if sparse_indices:
+                        result_lists.append(sparse_indices)
+
+                doc_indices = self._rrf_fusion_index_lists(result_lists, hybrid_cfg["rrf_k"])[
+                    : hybrid_cfg["max_candidates"]
+                ]
 
             hop1_indices, semantic_scores = self._rerank_hop1(doc_indices, query)
             multi_hop_cfg = self._get_multi_hop_config()

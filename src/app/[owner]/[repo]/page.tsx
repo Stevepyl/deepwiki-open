@@ -88,6 +88,97 @@ const wikiStyles = `
   }
 `;
 
+const CHAT_WS_CONNECT_TIMEOUT_MS = 5000;
+const CHAT_WS_RESPONSE_TIMEOUT_MS = 180000;
+const CHAT_WS_IDLE_TIMEOUT_MS = 60000;
+
+const getChatWebSocketUrl = (): string => {
+  const serverBaseUrl = (process.env.SERVER_BASE_URL || 'http://localhost:8001').replace(/\/$/, '');
+  if (serverBaseUrl.startsWith('ws://') || serverBaseUrl.startsWith('wss://')) {
+    return `${serverBaseUrl}/ws/chat`;
+  }
+  return `${serverBaseUrl.replace(/^https:/, 'wss:').replace(/^http:/, 'ws:')}/ws/chat`;
+};
+
+const readChatWebSocketResponse = (
+  requestBody: Record<string, unknown>,
+  label: string
+): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    let ws: WebSocket | null = null;
+    let content = '';
+    let settled = false;
+    let connectTimer: ReturnType<typeof setTimeout> | undefined;
+    let responseTimer: ReturnType<typeof setTimeout> | undefined;
+    let idleTimer: ReturnType<typeof setTimeout> | undefined;
+
+    const cleanup = () => {
+      if (connectTimer) clearTimeout(connectTimer);
+      if (responseTimer) clearTimeout(responseTimer);
+      if (idleTimer) clearTimeout(idleTimer);
+    };
+
+    const settle = (handler: () => void) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      handler();
+    };
+
+    const fail = (error: Error) => {
+      settle(() => {
+        if (ws && ws.readyState !== WebSocket.CLOSED) {
+          ws.close();
+        }
+        reject(error);
+      });
+    };
+
+    const resetIdleTimer = () => {
+      if (idleTimer) clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => {
+        fail(new Error(`WebSocket response idle timeout for ${label}`));
+      }, CHAT_WS_IDLE_TIMEOUT_MS);
+    };
+
+    try {
+      ws = new WebSocket(getChatWebSocketUrl());
+    } catch (error) {
+      reject(error instanceof Error ? error : new Error(`Failed to create WebSocket for ${label}`));
+      return;
+    }
+
+    connectTimer = setTimeout(() => {
+      fail(new Error(`WebSocket connection timeout for ${label}`));
+    }, CHAT_WS_CONNECT_TIMEOUT_MS);
+
+    responseTimer = setTimeout(() => {
+      fail(new Error(`WebSocket response timeout for ${label}`));
+    }, CHAT_WS_RESPONSE_TIMEOUT_MS);
+
+    ws.onopen = () => {
+      if (connectTimer) clearTimeout(connectTimer);
+      console.log(`WebSocket connection established for ${label}`);
+      resetIdleTimer();
+      ws?.send(JSON.stringify(requestBody));
+    };
+
+    ws.onmessage = (event) => {
+      content += event.data;
+      resetIdleTimer();
+    };
+
+    ws.onclose = () => {
+      console.log(`WebSocket connection closed for ${label}`);
+      settle(() => resolve(content));
+    };
+
+    ws.onerror = () => {
+      fail(new Error(`WebSocket error for ${label}`));
+    };
+  });
+};
+
 // Helper function to generate cache key for localStorage
 const getCacheKey = (owner: string, repo: string, repoType: string, language: string, isComprehensive: boolean = true): string => {
   return `deepwiki_cache_${repoType}_${owner}_${repo}_${language}_${isComprehensive ? 'comprehensive' : 'concise'}`;
@@ -523,63 +614,7 @@ Remember:
         let content = '';
 
         try {
-          // Create WebSocket URL from the server base URL
-          const serverBaseUrl = process.env.SERVER_BASE_URL || 'http://localhost:8001';
-          const wsBaseUrl = serverBaseUrl.replace(/^http/, 'ws')? serverBaseUrl.replace(/^https/, 'wss'): serverBaseUrl.replace(/^http/, 'ws');
-          const wsUrl = `${wsBaseUrl}/ws/chat`;
-
-          // Create a new WebSocket connection
-          const ws = new WebSocket(wsUrl);
-
-          // Create a promise that resolves when the WebSocket connection is complete
-          await new Promise<void>((resolve, reject) => {
-            // Set up event handlers
-            ws.onopen = () => {
-              console.log(`WebSocket connection established for page: ${page.title}`);
-              // Send the request as JSON
-              ws.send(JSON.stringify(requestBody));
-              resolve();
-            };
-
-            ws.onerror = (error) => {
-              console.error('WebSocket error:', error);
-              reject(new Error('WebSocket connection failed'));
-            };
-
-            // If the connection doesn't open within 5 seconds, fall back to HTTP
-            const timeout = setTimeout(() => {
-              reject(new Error('WebSocket connection timeout'));
-            }, 5000);
-
-            // Clear the timeout if the connection opens successfully
-            ws.onopen = () => {
-              clearTimeout(timeout);
-              console.log(`WebSocket connection established for page: ${page.title}`);
-              // Send the request as JSON
-              ws.send(JSON.stringify(requestBody));
-              resolve();
-            };
-          });
-
-          // Create a promise that resolves when the WebSocket response is complete
-          await new Promise<void>((resolve, reject) => {
-            // Handle incoming messages
-            ws.onmessage = (event) => {
-              content += event.data;
-            };
-
-            // Handle WebSocket close
-            ws.onclose = () => {
-              console.log(`WebSocket connection closed for page: ${page.title}`);
-              resolve();
-            };
-
-            // Handle WebSocket errors
-            ws.onerror = (error) => {
-              console.error('WebSocket error during message reception:', error);
-              reject(new Error('WebSocket error during message reception'));
-            };
-          });
+          content = await readChatWebSocketResponse(requestBody, `page: ${page.title}`);
         } catch (wsError) {
           console.error('WebSocket error, falling back to HTTP:', wsError);
 
@@ -820,63 +855,7 @@ IMPORTANT:
       let responseText = '';
 
       try {
-        // Create WebSocket URL from the server base URL
-        const serverBaseUrl = process.env.SERVER_BASE_URL || 'http://localhost:8001';
-        const wsBaseUrl = serverBaseUrl.replace(/^http/, 'ws')? serverBaseUrl.replace(/^https/, 'wss'): serverBaseUrl.replace(/^http/, 'ws');
-        const wsUrl = `${wsBaseUrl}/ws/chat`;
-
-        // Create a new WebSocket connection
-        const ws = new WebSocket(wsUrl);
-
-        // Create a promise that resolves when the WebSocket connection is complete
-        await new Promise<void>((resolve, reject) => {
-          // Set up event handlers
-          ws.onopen = () => {
-            console.log('WebSocket connection established for wiki structure');
-            // Send the request as JSON
-            ws.send(JSON.stringify(requestBody));
-            resolve();
-          };
-
-          ws.onerror = (error) => {
-            console.error('WebSocket error:', error);
-            reject(new Error('WebSocket connection failed'));
-          };
-
-          // If the connection doesn't open within 5 seconds, fall back to HTTP
-          const timeout = setTimeout(() => {
-            reject(new Error('WebSocket connection timeout'));
-          }, 5000);
-
-          // Clear the timeout if the connection opens successfully
-          ws.onopen = () => {
-            clearTimeout(timeout);
-            console.log('WebSocket connection established for wiki structure');
-            // Send the request as JSON
-            ws.send(JSON.stringify(requestBody));
-            resolve();
-          };
-        });
-
-        // Create a promise that resolves when the WebSocket response is complete
-        await new Promise<void>((resolve, reject) => {
-          // Handle incoming messages
-          ws.onmessage = (event) => {
-            responseText += event.data;
-          };
-
-          // Handle WebSocket close
-          ws.onclose = () => {
-            console.log('WebSocket connection closed for wiki structure');
-            resolve();
-          };
-
-          // Handle WebSocket errors
-          ws.onerror = (error) => {
-            console.error('WebSocket error during message reception:', error);
-            reject(new Error('WebSocket error during message reception'));
-          };
-        });
+        responseText = await readChatWebSocketResponse(requestBody, 'wiki structure');
       } catch (wsError) {
         console.error('WebSocket error, falling back to HTTP:', wsError);
 
@@ -1067,9 +1046,7 @@ IMPORTANT:
 
       // Start generating content for all pages with controlled concurrency
       if (pages.length > 0) {
-        // Mark all pages as in progress
-        const initialInProgress = new Set(pages.map(p => p.id));
-        setPagesInProgress(initialInProgress);
+        setPagesInProgress(new Set());
 
         console.log(`Starting generation for ${pages.length} pages with controlled concurrency`);
 
@@ -1944,6 +1921,16 @@ IMPORTANT:
   };
 
   const [isModelSelectionModalOpen, setIsModelSelectionModalOpen] = useState(false);
+  const totalPageCount = wikiStructure?.pages.length || 0;
+  const completedPageCount = wikiStructure
+    ? wikiStructure.pages.filter(page => {
+        const content = generatedPages[page.id]?.content;
+        return Boolean(content && content !== 'Loading...');
+      }).length
+    : 0;
+  const pageProgressPercent = totalPageCount > 0
+    ? Math.max(5, 100 * completedPageCount / totalPageCount)
+    : 0;
 
   return (
     <div className="h-screen bg-white p-4 md:p-8 flex flex-col">
@@ -1982,7 +1969,7 @@ IMPORTANT:
                   <div
                     className="bg-[var(--accent-primary)] h-2 rounded-full transition-all duration-300 ease-in-out"
                     style={{
-                      width: `${Math.max(5, 100 * (wikiStructure.pages.length - pagesInProgress.size) / wikiStructure.pages.length)}%`
+                      width: `${pageProgressPercent}%`
                     }}
                   />
                 </div>
@@ -1991,9 +1978,9 @@ IMPORTANT:
                     ? `${wikiStructure.pages.length}ページ中${wikiStructure.pages.length - pagesInProgress.size}ページ完了`
                     : messages.repoPage?.pagesCompleted
                         ? messages.repoPage.pagesCompleted
-                            .replace('{completed}', (wikiStructure.pages.length - pagesInProgress.size).toString())
-                            .replace('{total}', wikiStructure.pages.length.toString())
-                        : `${wikiStructure.pages.length - pagesInProgress.size} of ${wikiStructure.pages.length} pages completed`}
+                            .replace('{completed}', completedPageCount.toString())
+                            .replace('{total}', totalPageCount.toString())
+                        : `${completedPageCount} of ${totalPageCount} pages completed`}
                 </p>
 
                 {/* Show list of in-progress pages */}

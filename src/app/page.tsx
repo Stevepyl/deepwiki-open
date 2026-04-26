@@ -32,16 +32,48 @@ const DEMO_FLOW_CHART = `graph TD
 const DEMO_SEQUENCE_CHART = `sequenceDiagram
   participant User
   participant DeepWiki
-  participant GitHub
+  participant Repository
 
-  User->>DeepWiki: Enter repository URL
-  DeepWiki->>GitHub: Request repository data
-  GitHub-->>DeepWiki: Return repository data
+  User->>DeepWiki: Enter Git URL or local path
+  DeepWiki->>Repository: Load repository data
+  Repository-->>DeepWiki: Return repository data
   DeepWiki->>DeepWiki: Process and analyze code
   DeepWiki-->>User: Display wiki with diagrams
 
   %% Add a note to make text more visible
-  Note over User,GitHub: DeepWiki supports sequence diagrams for visualizing interactions`;
+  Note over User,Repository: DeepWiki supports sequence diagrams for visualizing interactions`;
+
+const INVALID_REPOSITORY_FORMAT_MESSAGE =
+  'Invalid repository format. Use "owner/repo", a GitHub/GitLab/BitBucket URL, or a local folder path like "/path/to/folder", "C:\\path\\to\\folder", "C:/path/to/folder", or "file:///C:/path/to/folder".';
+
+const getLocalRepoName = (localPath: string): string => {
+  const normalized = localPath.replace(/[\\/]+$/, '');
+  const parts = normalized.split(/[\\/]/).filter(Boolean);
+  return parts[parts.length - 1] || 'local-repo';
+};
+
+const parseFileUrlAsLocalPath = (input: string): string | null => {
+  if (!input.toLowerCase().startsWith('file://')) {
+    return null;
+  }
+
+  try {
+    const url = new URL(input);
+    const decodedPath = decodeURIComponent(url.pathname);
+
+    if (url.hostname) {
+      return `\\\\${url.hostname}${decodedPath.replace(/\//g, '\\')}`;
+    }
+
+    if (/^\/[a-zA-Z]:/.test(decodedPath)) {
+      return decodedPath.slice(1).replace(/\//g, '\\');
+    }
+
+    return decodedPath;
+  } catch {
+    return null;
+  }
+};
 
 export default function Home() {
   const router = useRouter();
@@ -187,22 +219,40 @@ export default function Home() {
     let owner = '', repo = '', type = 'github', fullPath;
     let localPath: string | undefined;
 
-    // Handle Windows absolute paths (e.g., C:\path\to\folder)
-    const windowsPathRegex = /^[a-zA-Z]:\\(?:[^\\/:*?"<>|\r\n]+\\)*[^\\/:*?"<>|\r\n]*$/;
+    const fileUrlLocalPath = parseFileUrlAsLocalPath(input);
+
+    // Handle Windows absolute paths with backslashes or forward slashes.
+    const windowsPathRegex = /^[a-zA-Z]:[\\/].+$/;
+    const uncPathRegex = /^\\\\[^\\]+\\[^\\]+/;
+    const ownerRepoRegex = /^([^/\s]+)\/([^/\s]+?)(?:\.git)?$/;
     const customGitRegex = /^(?:https?:\/\/)?([^\/]+)\/(.+?)\/([^\/]+)(?:\.git)?\/?$/;
 
-    if (windowsPathRegex.test(input)) {
+    if (fileUrlLocalPath) {
+      type = 'local';
+      localPath = fileUrlLocalPath;
+      repo = getLocalRepoName(fileUrlLocalPath);
+      owner = 'local';
+    }
+    else if (windowsPathRegex.test(input) || uncPathRegex.test(input)) {
       type = 'local';
       localPath = input;
-      repo = input.split('\\').pop() || 'local-repo';
+      repo = getLocalRepoName(input);
       owner = 'local';
     }
     // Handle Unix/Linux absolute paths (e.g., /path/to/folder)
     else if (input.startsWith('/')) {
       type = 'local';
       localPath = input;
-      repo = input.split('/').filter(Boolean).pop() || 'local-repo';
+      repo = getLocalRepoName(input);
       owner = 'local';
+    }
+    // Handle shorthand GitHub repositories (e.g., owner/repo)
+    else if (ownerRepoRegex.test(input)) {
+      const match = input.match(ownerRepoRegex);
+      owner = match?.[1] || '';
+      repo = match?.[2] || '';
+      type = 'github';
+      fullPath = input;
     }
     else if (customGitRegex.test(input)) {
       // Detect repository type based on domain
@@ -256,7 +306,7 @@ export default function Home() {
     const parsedRepo = parseRepositoryInput(repositoryInput);
 
     if (!parsedRepo) {
-      setError('Invalid repository format. Use "owner/repo", GitHub/GitLab/BitBucket URL, or a local folder path like "/path/to/folder" or "C:\\path\\to\\folder".');
+      setError(INVALID_REPOSITORY_FORMAT_MESSAGE);
       return;
     }
 
@@ -337,7 +387,7 @@ export default function Home() {
     const parsedRepo = parseRepositoryInput(repositoryInput);
 
     if (!parsedRepo) {
-      setError('Invalid repository format. Use "owner/repo", GitHub/GitLab/BitBucket URL, or a local folder path like "/path/to/folder" or "C:\\path\\to\\folder".');
+      setError(INVALID_REPOSITORY_FORMAT_MESSAGE);
       setIsSubmitting(false);
       return;
     }
@@ -386,7 +436,7 @@ export default function Home() {
     const queryString = params.toString() ? `?${params.toString()}` : '';
 
     // Navigate to the dynamic route
-    router.push(`/${owner}/${repo}${queryString}`);
+    router.push(`/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}${queryString}`);
 
     // The isSubmitting state will be reset when the component unmounts during navigation
   };
@@ -422,7 +472,7 @@ export default function Home() {
                   type="text"
                   value={repositoryInput}
                   onChange={handleRepositoryInputChange}
-                  placeholder={t('form.repoPlaceholder') || "owner/repo, GitHub/GitLab/BitBucket URL, or local folder path"}
+                  placeholder={t('form.repoPlaceholder') || "GitHub URL or local folder path"}
                   className="input-japanese block w-full pl-10 pr-3 py-2.5 border-[var(--border-color)] rounded-lg bg-transparent text-[var(--foreground)] focus:outline-none focus:border-[var(--accent-primary)]"
                 />
                 {error && (
@@ -545,20 +595,20 @@ export default function Home() {
             <p className="text-sm text-[var(--foreground)] mb-3">{t('home.enterRepoUrl')}</p>
             <div className="grid grid-cols-1 gap-3 text-xs text-[var(--muted)]">
               <div
-                className="bg-[var(--background)]/70 p-3 rounded border border-[var(--border-color)] font-mono overflow-x-hidden whitespace-nowrap"
+                className="bg-[var(--background)]/70 p-3 rounded border border-[var(--border-color)] font-mono overflow-x-auto whitespace-nowrap"
               >https://github.com/AsyncFuncAI/deepwiki-open
               </div>
               <div
-                className="bg-[var(--background)]/70 p-3 rounded border border-[var(--border-color)] font-mono overflow-x-hidden whitespace-nowrap"
-              >https://gitlab.com/gitlab-org/gitlab
+                className="bg-[var(--background)]/70 p-3 rounded border border-[var(--border-color)] font-mono overflow-x-auto whitespace-nowrap"
+              >D:\my_lab\repos\astropy
               </div>
               <div
-                className="bg-[var(--background)]/70 p-3 rounded border border-[var(--border-color)] font-mono overflow-x-hidden whitespace-nowrap"
+                className="bg-[var(--background)]/70 p-3 rounded border border-[var(--border-color)] font-mono overflow-x-auto whitespace-nowrap"
+              >/home/user/repos/astropy
+              </div>
+              <div
+                className="bg-[var(--background)]/70 p-3 rounded border border-[var(--border-color)] font-mono overflow-x-auto whitespace-nowrap"
               >AsyncFuncAI/deepwiki-open
-              </div>
-              <div
-                className="bg-[var(--background)]/70 p-3 rounded border border-[var(--border-color)] font-mono overflow-x-hidden whitespace-nowrap"
-              >https://bitbucket.org/atlassian/atlaskit
               </div>
             </div>
           </div>

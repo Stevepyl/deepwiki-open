@@ -20,9 +20,9 @@
   "home": {
     "welcome": "歡迎使用 DeepWiki",
     "welcomeTagline": "為程式碼儲存庫提供 AI 驅動的文件",
-    "description": "只需一次點擊，即可從 GitHub、GitLab 或 Bitbucket 儲存庫產生全面的文件。",
+    "description": "只需一次點擊，即可從 GitHub、GitLab、Bitbucket 或本機儲存庫產生全面的文件。",
     "quickStart": "快速開始",
-    "enterRepoUrl": "請以下列格式之一輸入儲存庫 URL：",
+    "enterRepoUrl": "請輸入 GitHub/GitLab/Bitbucket URL、擁有者/儲存庫，或本機資料夾路徑：",
     "advancedVisualization": "使用 Mermaid 圖表進行進階視覺化",
     "diagramDescription": "DeepWiki 自動產生互動式圖表，協助您理解程式碼結構和關係：",
     "flowDiagram": "流程圖",
@@ -31,7 +31,7 @@
   "form": {
     "repository": "儲存庫",
     "configureWiki": "設定 Wiki",
-    "repoPlaceholder": "擁有者/儲存庫或 GitHub/GitLab/Bitbucket URL",
+    "repoPlaceholder": "GitHub URL、擁有者/儲存庫，或本機資料夾路徑",
     "wikiLanguage": "Wiki 語言",
     "modelOptions": "模型選項",
     "modelProvider": "模型提供商",

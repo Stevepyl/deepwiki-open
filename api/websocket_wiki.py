@@ -1,7 +1,7 @@
+import json
 import logging
 import os
 from typing import List, Optional, Dict, Any
-from urllib.parse import unquote
 
 import google.generativeai as genai
 from adalflow.components.model_client.ollama_client import OllamaClient
@@ -17,13 +17,15 @@ from api.config import (
     AWS_ACCESS_KEY_ID,
     AWS_SECRET_ACCESS_KEY,
 )
+from api.chat_history import format_conversation_history
 from api.data_pipeline import count_tokens, get_file_content
 from api.bedrock_client import BedrockClient
 from api.openai_client import OpenAIClient
 from api.openrouter_client import OpenRouterClient
 from api.azureai_client import AzureAIClient
 from api.dashscope_client import DashscopeClient
-from api.rag import RAG
+from api.rag import build_citations_from_retrieved_documents, format_retrieved_documents_for_prompt
+from api.rag_cache import get_prepared_rag, parse_filter_list
 
 # Configure logging
 from api.logging_config import setup_logging
@@ -59,6 +61,7 @@ class ChatCompletionRequest(BaseModel):
     excluded_files: Optional[str] = Field(None, description="Comma-separated list of file patterns to exclude from processing")
     included_dirs: Optional[str] = Field(None, description="Comma-separated list of directories to include exclusively")
     included_files: Optional[str] = Field(None, description="Comma-separated list of file patterns to include exclusively")
+    include_citations: bool = Field(False, description="When true, stream structured citation events before answer tokens")
 
 async def handle_websocket_chat(websocket: WebSocket):
     """
@@ -83,31 +86,42 @@ async def handle_websocket_chat(websocket: WebSocket):
                     logger.warning(f"Request exceeds recommended token limit ({tokens} > 7500)")
                     input_too_large = True
 
-        # Create a new RAG instance for this request
+        # Get a prepared RAG retriever for this repository. The cached object is
+        # used only for retrieval; conversation state is built from this request.
         try:
-            request_rag = RAG(provider=request.provider, model=request.model)
-
-            # Extract custom file filter parameters if provided
-            excluded_dirs = None
-            excluded_files = None
-            included_dirs = None
-            included_files = None
+            excluded_dirs = parse_filter_list(request.excluded_dirs)
+            excluded_files = parse_filter_list(request.excluded_files)
+            included_dirs = parse_filter_list(request.included_dirs)
+            included_files = parse_filter_list(request.included_files)
 
             if request.excluded_dirs:
-                excluded_dirs = [unquote(dir_path) for dir_path in request.excluded_dirs.split('\n') if dir_path.strip()]
                 logger.info(f"Using custom excluded directories: {excluded_dirs}")
             if request.excluded_files:
-                excluded_files = [unquote(file_pattern) for file_pattern in request.excluded_files.split('\n') if file_pattern.strip()]
                 logger.info(f"Using custom excluded files: {excluded_files}")
             if request.included_dirs:
-                included_dirs = [unquote(dir_path) for dir_path in request.included_dirs.split('\n') if dir_path.strip()]
                 logger.info(f"Using custom included directories: {included_dirs}")
             if request.included_files:
-                included_files = [unquote(file_pattern) for file_pattern in request.included_files.split('\n') if file_pattern.strip()]
                 logger.info(f"Using custom included files: {included_files}")
 
-            request_rag.prepare_retriever(request.repo_url, request.type, request.token, excluded_dirs, excluded_files, included_dirs, included_files)
-            logger.info(f"Retriever prepared for {request.repo_url}")
+            prepared_rag = get_prepared_rag(
+                repo_url=request.repo_url,
+                repo_type=request.type,
+                token=request.token,
+                provider=request.provider,
+                model=request.model,
+                excluded_dirs=excluded_dirs,
+                excluded_files=excluded_files,
+                included_dirs=included_dirs,
+                included_files=included_files,
+            )
+            request_rag = prepared_rag.rag
+            logger.info(
+                "Retriever prepared for %s (cache_hit=%s, documents=%s, latency=%ss)",
+                request.repo_url,
+                prepared_rag.cache_hit,
+                prepared_rag.documents_count,
+                prepared_rag.prepare_latency_sec,
+            )
         except ValueError as e:
             if "No valid documents with embeddings found" in str(e):
                 logger.error(f"No valid embeddings found: {str(e)}")
@@ -141,17 +155,7 @@ async def handle_websocket_chat(websocket: WebSocket):
             await websocket.close()
             return
 
-        # Process previous messages to build conversation history
-        for i in range(0, len(request.messages) - 1, 2):
-            if i + 1 < len(request.messages):
-                user_msg = request.messages[i]
-                assistant_msg = request.messages[i + 1]
-
-                if user_msg.role == "user" and assistant_msg.role == "assistant":
-                    request_rag.memory.add_dialog_turn(
-                        user_query=user_msg.content,
-                        assistant_response=assistant_msg.content
-                    )
+        conversation_history = format_conversation_history(request.messages)
 
         # Check if this is a Deep Research request
         is_deep_research = False
@@ -192,6 +196,7 @@ async def handle_websocket_chat(websocket: WebSocket):
         # Only retrieve documents if input is not too large
         context_text = ""
         retrieved_documents = None
+        citations = []
 
         if not input_too_large:
             try:
@@ -208,30 +213,10 @@ async def handle_websocket_chat(websocket: WebSocket):
                     retrieved_documents = request_rag(rag_query, language=request.language)
 
                     if retrieved_documents and retrieved_documents[0].documents:
-                        # Format context for the prompt in a more structured way
                         documents = retrieved_documents[0].documents
                         logger.info(f"Retrieved {len(documents)} documents")
-
-                        # Group documents by file path
-                        docs_by_file = {}
-                        for doc in documents:
-                            file_path = doc.meta_data.get('file_path', 'unknown')
-                            if file_path not in docs_by_file:
-                                docs_by_file[file_path] = []
-                            docs_by_file[file_path].append(doc)
-
-                        # Format context text with file path grouping
-                        context_parts = []
-                        for file_path, docs in docs_by_file.items():
-                            # Add file header with metadata
-                            header = f"## File Path: {file_path}\n\n"
-                            # Add document content
-                            content = "\n\n".join([doc.text for doc in docs])
-
-                            context_parts.append(f"{header}{content}")
-
-                        # Join all parts with clear separation
-                        context_text = "\n\n" + "-" * 10 + "\n\n".join(context_parts)
+                        context_text = format_retrieved_documents_for_prompt(documents)
+                        citations = build_citations_from_retrieved_documents(documents)
                     else:
                         logger.warning("No documents retrieved from RAG")
                 except Exception as e:
@@ -408,12 +393,6 @@ This file contains...
                 logger.error(f"Error retrieving file content: {str(e)}")
                 # Continue without file content if there's an error
 
-        # Format conversation history
-        conversation_history = ""
-        for turn_id, turn in request_rag.memory().items():
-            if not isinstance(turn_id, int) and hasattr(turn, 'user_query') and hasattr(turn, 'assistant_response'):
-                conversation_history += f"<turn>\n<user>{turn.user_query.query_str}</user>\n<assistant>{turn.assistant_response.response_str}</assistant>\n</turn>\n"
-
         # Create the prompt with context
         prompt = f"/no_think {system_prompt}\n\n"
 
@@ -571,8 +550,29 @@ This file contains...
                 }
             )
 
+        async def send_stream_event(message_type: str, data=None) -> None:
+            payload = {"type": message_type}
+            if data is not None:
+                payload["data"] = data
+            await websocket.send_text(json.dumps(payload, ensure_ascii=False))
+
+        async def send_stream_text(text: str) -> None:
+            text = str(text)
+            if request.include_citations:
+                await send_stream_event("token", text)
+            else:
+                await websocket.send_text(text)
+
+        async def close_stream() -> None:
+            if request.include_citations:
+                await send_stream_event("done")
+            await websocket.close()
+
         # Process the response based on the provider
         try:
+            if request.include_citations:
+                await send_stream_event("citations", citations)
+
             if request.provider == "ollama":
                 # Get the response and handle it properly using the previously created api_kwargs
                 response = await model.acall(api_kwargs=api_kwargs, model_type=ModelType.LLM)
@@ -599,9 +599,9 @@ This file contains...
 
                     if isinstance(text, str) and text and not text.startswith('model=') and not text.startswith('created_at='):
                         clean_text = text.replace('<think>', '').replace('</think>', '')
-                        await websocket.send_text(clean_text)
+                        await send_stream_text(clean_text)
                 # Explicitly close the WebSocket connection after the response is complete
-                await websocket.close()
+                await close_stream()
             elif request.provider == "openrouter":
                 try:
                     # Get the response and handle it properly using the previously created api_kwargs
@@ -609,15 +609,15 @@ This file contains...
                     response = await model.acall(api_kwargs=api_kwargs, model_type=ModelType.LLM)
                     # Handle streaming response from OpenRouter
                     async for chunk in response:
-                        await websocket.send_text(chunk)
+                        await send_stream_text(chunk)
                     # Explicitly close the WebSocket connection after the response is complete
-                    await websocket.close()
+                    await close_stream()
                 except Exception as e_openrouter:
                     logger.error(f"Error with OpenRouter API: {str(e_openrouter)}")
                     error_msg = f"\nError with OpenRouter API: {str(e_openrouter)}\n\nPlease check that you have set the OPENROUTER_API_KEY environment variable with a valid API key."
-                    await websocket.send_text(error_msg)
+                    await send_stream_text(error_msg)
                     # Close the WebSocket connection after sending the error message
-                    await websocket.close()
+                    await close_stream()
             elif request.provider == "openai":
                 try:
                     # Get the response and handle it properly using the previously created api_kwargs
@@ -631,24 +631,24 @@ This file contains...
                             if delta is not None:
                                 text = getattr(delta, "content", None)
                                 if text is not None:
-                                    await websocket.send_text(text)
+                                    await send_stream_text(text)
                     # Explicitly close the WebSocket connection after the response is complete
-                    await websocket.close()
+                    await close_stream()
                 except Exception as e_openai:
                     logger.error(f"Error with Openai API: {str(e_openai)}")
                     error_msg = f"\nError with Openai API: {str(e_openai)}\n\nPlease check that you have set the OPENAI_API_KEY environment variable with a valid API key."
-                    await websocket.send_text(error_msg)
+                    await send_stream_text(error_msg)
                     # Close the WebSocket connection after sending the error message
-                    await websocket.close()
+                    await close_stream()
             elif request.provider == "bedrock":
                 try:
                     logger.info("Making AWS Bedrock API call")
                     response = await model.acall(api_kwargs=api_kwargs, model_type=ModelType.LLM)
                     if isinstance(response, str):
-                        await websocket.send_text(response)
+                        await send_stream_text(response)
                     else:
-                        await websocket.send_text(str(response))
-                    await websocket.close()
+                        await send_stream_text(str(response))
+                    await close_stream()
                 except Exception as e_bedrock:
                     logger.error(f"Error with AWS Bedrock API: {str(e_bedrock)}")
                     error_msg = (
@@ -656,8 +656,8 @@ This file contains...
                         "Please check that you have set the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY "
                         "environment variables with valid credentials."
                     )
-                    await websocket.send_text(error_msg)
-                    await websocket.close()
+                    await send_stream_text(error_msg)
+                    await close_stream()
             elif request.provider == "azure":
                 try:
                     # Get the response and handle it properly using the previously created api_kwargs
@@ -671,15 +671,15 @@ This file contains...
                             if delta is not None:
                                 text = getattr(delta, "content", None)
                                 if text is not None:
-                                    await websocket.send_text(text)
+                                    await send_stream_text(text)
                     # Explicitly close the WebSocket connection after the response is complete
-                    await websocket.close()
+                    await close_stream()
                 except Exception as e_azure:
                     logger.error(f"Error with Azure AI API: {str(e_azure)}")
                     error_msg = f"\nError with Azure AI API: {str(e_azure)}\n\nPlease check that you have set the AZURE_OPENAI_API_KEY, AZURE_OPENAI_ENDPOINT, and AZURE_OPENAI_VERSION environment variables with valid values."
-                    await websocket.send_text(error_msg)
+                    await send_stream_text(error_msg)
                     # Close the WebSocket connection after sending the error message
-                    await websocket.close()
+                    await close_stream()
             elif request.provider == "dashscope":
                 try:
                     # Get the response and handle it properly using the previously created api_kwargs
@@ -691,9 +691,9 @@ This file contains...
                     # generator of plain text chunks
                     async for text in response:
                         if text:
-                            await websocket.send_text(text)
+                            await send_stream_text(text)
                     # Explicitly close the WebSocket connection after the response is complete
-                    await websocket.close()
+                    await close_stream()
                 except Exception as e_dashscope:
                     logger.error(f"Error with Dashscope API: {str(e_dashscope)}")
                     error_msg = (
@@ -701,16 +701,16 @@ This file contains...
                         "Please check that you have set the DASHSCOPE_API_KEY (and optionally "
                         "DASHSCOPE_WORKSPACE_ID) environment variables with valid values."
                     )
-                    await websocket.send_text(error_msg)
+                    await send_stream_text(error_msg)
                     # Close the WebSocket connection after sending the error message
-                    await websocket.close()
+                    await close_stream()
             else:
                 # Google Generative AI (default provider)
                 response = model.generate_content(prompt, stream=True)
                 for chunk in response:
                     if hasattr(chunk, 'text'):
-                        await websocket.send_text(chunk.text)
-                await websocket.close()
+                        await send_stream_text(chunk.text)
+                await close_stream()
 
         except Exception as e_outer:
             logger.error(f"Error in streaming response: {str(e_outer)}")
@@ -751,7 +751,7 @@ This file contains...
                             text = getattr(chunk, 'response', None) or getattr(chunk, 'text', None) or str(chunk)
                             if text and not text.startswith('model=') and not text.startswith('created_at='):
                                 text = text.replace('<think>', '').replace('</think>', '')
-                                await websocket.send_text(text)
+                                await send_stream_text(text)
                     elif request.provider == "openrouter":
                         try:
                             # Create new api_kwargs with the simplified prompt
@@ -767,11 +767,11 @@ This file contains...
 
                             # Handle streaming fallback_response from OpenRouter
                             async for chunk in fallback_response:
-                                await websocket.send_text(chunk)
+                                await send_stream_text(chunk)
                         except Exception as e_fallback:
                             logger.error(f"Error with OpenRouter API fallback: {str(e_fallback)}")
                             error_msg = f"\nError with OpenRouter API fallback: {str(e_fallback)}\n\nPlease check that you have set the OPENROUTER_API_KEY environment variable with a valid API key."
-                            await websocket.send_text(error_msg)
+                            await send_stream_text(error_msg)
                     elif request.provider == "openai":
                         try:
                             # Create new api_kwargs with the simplified prompt
@@ -788,11 +788,11 @@ This file contains...
                             # Handle streaming fallback_response from Openai
                             async for chunk in fallback_response:
                                 text = chunk if isinstance(chunk, str) else getattr(chunk, 'text', str(chunk))
-                                await websocket.send_text(text)
+                                await send_stream_text(text)
                         except Exception as e_fallback:
                             logger.error(f"Error with Openai API fallback: {str(e_fallback)}")
                             error_msg = f"\nError with Openai API fallback: {str(e_fallback)}\n\nPlease check that you have set the OPENAI_API_KEY environment variable with a valid API key."
-                            await websocket.send_text(error_msg)
+                            await send_stream_text(error_msg)
                     elif request.provider == "bedrock":
                         try:
                             fallback_api_kwargs = model.convert_inputs_to_api_kwargs(
@@ -807,9 +807,9 @@ This file contains...
                             )
 
                             if isinstance(fallback_response, str):
-                                await websocket.send_text(fallback_response)
+                                await send_stream_text(fallback_response)
                             else:
-                                await websocket.send_text(str(fallback_response))
+                                await send_stream_text(str(fallback_response))
                         except Exception as e_fallback:
                             logger.error(
                                 f"Error with AWS Bedrock API fallback: {str(e_fallback)}"
@@ -819,7 +819,7 @@ This file contains...
                                 "Please check that you have set the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY "
                                 "environment variables with valid credentials."
                             )
-                            await websocket.send_text(error_msg)
+                            await send_stream_text(error_msg)
                     elif request.provider == "azure":
                         try:
                             # Create new api_kwargs with the simplified prompt
@@ -841,11 +841,11 @@ This file contains...
                                     if delta is not None:
                                         text = getattr(delta, "content", None)
                                         if text is not None:
-                                            await websocket.send_text(text)
+                                            await send_stream_text(text)
                         except Exception as e_fallback:
                             logger.error(f"Error with Azure AI API fallback: {str(e_fallback)}")
                             error_msg = f"\nError with Azure AI API fallback: {str(e_fallback)}\n\nPlease check that you have set the AZURE_OPENAI_API_KEY, AZURE_OPENAI_ENDPOINT, and AZURE_OPENAI_VERSION environment variables with valid values."
-                            await websocket.send_text(error_msg)
+                            await send_stream_text(error_msg)
                     elif request.provider == "dashscope":
                         try:
                             # Create new api_kwargs with the simplified prompt
@@ -864,7 +864,7 @@ This file contains...
                             # generator of text chunks
                             async for text in fallback_response:
                                 if text:
-                                    await websocket.send_text(text)
+                                    await send_stream_text(text)
                         except Exception as e_fallback:
                             logger.error(
                                 f"Error with Dashscope API fallback: {str(e_fallback)}"
@@ -874,7 +874,7 @@ This file contains...
                                 "Please check that you have set the DASHSCOPE_API_KEY (and optionally "
                                 "DASHSCOPE_WORKSPACE_ID) environment variables with valid values."
                             )
-                            await websocket.send_text(error_msg)
+                            await send_stream_text(error_msg)
                     else:
                         # Google Generative AI fallback (default provider)
                         model_config = get_model_config(request.provider, request.model)
@@ -892,17 +892,18 @@ This file contains...
                         )
                         for chunk in fallback_response:
                             if hasattr(chunk, "text"):
-                                await websocket.send_text(chunk.text)
+                                await send_stream_text(chunk.text)
+                    await close_stream()
                 except Exception as e2:
                     logger.error(f"Error in fallback streaming response: {str(e2)}")
-                    await websocket.send_text(f"\nI apologize, but your request is too large for me to process. Please try a shorter query or break it into smaller parts.")
+                    await send_stream_text(f"\nI apologize, but your request is too large for me to process. Please try a shorter query or break it into smaller parts.")
                     # Close the WebSocket connection after sending the error message
-                    await websocket.close()
+                    await close_stream()
             else:
                 # For other errors, return the error message
-                await websocket.send_text(f"\nError: {error_message}")
+                await send_stream_text(f"\nError: {error_message}")
                 # Close the WebSocket connection after sending the error message
-                await websocket.close()
+                await close_stream()
 
     except WebSocketDisconnect:
         logger.info("WebSocket disconnected")

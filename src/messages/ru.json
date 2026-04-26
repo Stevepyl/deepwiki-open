@@ -22,7 +22,7 @@
     "welcomeTagline": "Документация с поддержкой ИИ для ваших репозиториев кода",
     "description": "Создавайте подробную документацию из репозиториев GitHub, GitLab или Bitbucket всего за несколько кликов.",
     "quickStart": "Быстрый старт",
-    "enterRepoUrl": "Введите URL репозитория в одном из следующих форматов:",
+    "enterRepoUrl": "Введите URL GitHub/GitLab/Bitbucket, owner/repo или путь к локальной папке:",
     "advancedVisualization": "Продвинутая визуализация с диаграммами Mermaid",
     "diagramDescription": "DeepWiki автоматически генерирует интерактивные диаграммы, чтобы помочь вам понять структуру и связи в коде:",
     "flowDiagram": "Диаграмма потока",
@@ -31,7 +31,7 @@
   "form": {
     "repository": "Репозиторий",
     "configureWiki": "Настроить Wiki",
-    "repoPlaceholder": "owner/repo или URL GitHub/GitLab/Bitbucket",
+    "repoPlaceholder": "URL GitHub, owner/repo или локальный путь",
     "wikiLanguage": "Язык Wiki",
     "modelOptions": "Настройки модели",
     "modelProvider": "Поставщик модели",

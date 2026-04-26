@@ -4,7 +4,7 @@ from adalflow.core.types import Document
 
 from api.data_pipeline import read_all_documents
 from api import rag as rag_module
-from api.rag import RAG
+from api.rag import RAG, build_citations_from_retrieved_documents
 
 
 def _make_code_doc(
@@ -209,6 +209,9 @@ def test_call_multi_hop_merges_and_reranks_expanded_docs(monkeypatch):
         {
             "top_k": 20,
             "symbol_alpha": 0.7,
+            "hybrid": {
+                "enabled": False,
+            },
             "multi_hop": {
                 "enabled": True,
                 "seed_k": 1,
@@ -269,6 +272,9 @@ def test_call_without_multi_hop_keeps_hop1_order(monkeypatch):
         {
             "top_k": 20,
             "symbol_alpha": 0.7,
+            "hybrid": {
+                "enabled": False,
+            },
             "multi_hop": {
                 "enabled": False,
             },
@@ -279,6 +285,112 @@ def test_call_without_multi_hop_keeps_hop1_order(monkeypatch):
 
     assert retrieved_documents[0].doc_indices == [0]
     assert len(retrieved_documents[0].documents) == 1
+
+
+def test_call_hybrid_exact_retrieves_symbol_outside_faiss(monkeypatch):
+    documents = [
+        _make_code_doc(
+            text="def unrelated(): pass",
+            file_path="pkg/other.py",
+            symbol_full_name="pkg.other.unrelated",
+            symbol_name="unrelated",
+            ast_chunk_index=0,
+            ast_chunk_count=1,
+            start_line=1,
+            end_line=2,
+        ),
+        _make_code_doc(
+            text="def parse_python(path): return path",
+            file_path="app/ingest.py",
+            symbol_full_name="app.ingest.parse_python",
+            symbol_name="parse_python",
+            ast_chunk_index=2,
+            ast_chunk_count=4,
+            start_line=42,
+            end_line=55,
+        ),
+    ]
+    retriever_result = SimpleNamespace(doc_indices=[0], documents=[])
+    rag = _build_test_rag(documents, retriever=lambda _: [retriever_result])
+
+    monkeypatch.setitem(
+        rag_module.configs,
+        "retriever",
+        {
+            "top_k": 20,
+            "symbol_alpha": 0.7,
+            "hybrid": {
+                "enabled": True,
+                "exact_enabled": True,
+                "sparse_enabled": False,
+                "exact_top_k": 5,
+                "rrf_k": 60,
+                "max_candidates": 10,
+                "max_query_tokens": 8,
+            },
+            "multi_hop": {
+                "enabled": False,
+            },
+        },
+    )
+
+    retrieved_documents = rag.call("`parse_python` 在哪里定义？")
+
+    assert retrieved_documents[0].doc_indices[0] == 1
+    assert retrieved_documents[0].documents[0].meta_data["symbol_name"] == "parse_python"
+
+
+def test_call_hybrid_sparse_retrieves_keyword_match_outside_faiss(monkeypatch):
+    documents = [
+        _make_code_doc(
+            text="def unrelated(): return None",
+            file_path="pkg/other.py",
+            symbol_full_name="pkg.other.unrelated",
+            symbol_name="unrelated",
+            ast_chunk_index=0,
+            ast_chunk_count=1,
+            start_line=1,
+            end_line=2,
+        ),
+        _make_code_doc(
+            text="def validate_token(token): return token.startswith('ghp_')",
+            file_path="api/auth.py",
+            symbol_full_name="api.auth.validate_token",
+            symbol_name="validate_token",
+            ast_chunk_index=0,
+            ast_chunk_count=1,
+            start_line=10,
+            end_line=12,
+        ),
+    ]
+    retriever_result = SimpleNamespace(doc_indices=[0], documents=[])
+    rag = _build_test_rag(documents, retriever=lambda _: [retriever_result])
+
+    monkeypatch.setitem(
+        rag_module.configs,
+        "retriever",
+        {
+            "top_k": 20,
+            "symbol_alpha": 0.5,
+            "hybrid": {
+                "enabled": True,
+                "exact_enabled": False,
+                "sparse_enabled": True,
+                "sparse_top_k": 5,
+                "rrf_k": 60,
+                "max_candidates": 10,
+                "max_query_tokens": 8,
+            },
+            "multi_hop": {
+                "enabled": False,
+            },
+        },
+    )
+
+    retrieved_documents = rag.call("validate token 鉴权逻辑在哪里？")
+
+    assert 1 in retrieved_documents[0].doc_indices
+    assert retrieved_documents[0].documents[0].meta_data["file_path"] == "api/auth.py"
 
 
 def test_call_with_missing_metadata_keeps_hop1_results(monkeypatch):
@@ -309,6 +421,9 @@ def test_call_with_missing_metadata_keeps_hop1_results(monkeypatch):
         {
             "top_k": 20,
             "symbol_alpha": 0.7,
+            "hybrid": {
+                "enabled": False,
+            },
             "multi_hop": {
                 "enabled": True,
                 "seed_k": 1,
@@ -331,3 +446,75 @@ def test_call_with_missing_metadata_keeps_hop1_results(monkeypatch):
     retrieved_documents = rag.call("Where is alpha defined?")
 
     assert retrieved_documents[0].doc_indices == [0]
+
+
+def test_build_citations_from_retrieved_documents_extracts_metadata():
+    documents = [
+        _make_code_doc(
+            text="def alpha():\n    return 1",
+            file_path="pkg/foo.py",
+            symbol_full_name="pkg.foo.alpha",
+            start_line=10,
+            end_line=12,
+            doc_type="py",
+        ),
+        _make_code_doc(
+            text="class Beta:\n    pass",
+            file_path="pkg/bar.py",
+            symbol_name="Beta",
+            start_line=20,
+            end_line=21,
+            doc_type="py",
+        ),
+    ]
+
+    citations = build_citations_from_retrieved_documents(documents)
+
+    assert citations[0] == {
+        "index": 1,
+        "file_path": "pkg/foo.py",
+        "start_line": 10,
+        "end_line": 12,
+        "symbol": "pkg.foo.alpha",
+        "chunk_type": "py",
+        "score": 1.0,
+        "snippet": "def alpha():\n    return 1",
+    }
+    assert citations[1]["index"] == 2
+    assert citations[1]["symbol"] == "Beta"
+    assert citations[1]["score"] == 0.0
+
+
+def test_build_citations_from_retrieved_documents_truncates_snippet():
+    document = _make_code_doc(
+        text="x" * 1200,
+        file_path="pkg/long.py",
+        start_line=1,
+        end_line=100,
+    )
+
+    citations = build_citations_from_retrieved_documents(
+        [document],
+        max_snippet_chars=32,
+    )
+
+    assert citations[0]["snippet"] == "x" * 32 + "\n...[truncated]"
+
+
+def test_build_citations_from_retrieved_documents_handles_missing_metadata():
+    document = Document(text="plain text", meta_data={})
+
+    citations = build_citations_from_retrieved_documents([document])
+
+    assert citations == [
+        {
+            "index": 1,
+            "file_path": "unknown",
+            "start_line": 0,
+            "end_line": 0,
+            "symbol": "",
+            "chunk_type": "",
+            "score": 1.0,
+            "snippet": "plain text",
+        }
+    ]
