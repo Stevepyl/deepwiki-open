@@ -69,7 +69,7 @@ sys.stderr = _real_stderr
 _BENCHMARK_DIR = Path(__file__).resolve().parent
 _GROUND_TRUTH_DIR = _BENCHMARK_DIR / "ground_truth"
 _RAW_RESULTS_DIR = _BENCHMARK_DIR / "output" / "raw_results"
-_EVAL_DIR = _BENCHMARK_DIR / "output" / "eval"
+_EVAL_DIR = _BENCHMARK_DIR / "candidate"
 
 _SLUG_RE = re.compile(r"[^a-z0-9]+")
 

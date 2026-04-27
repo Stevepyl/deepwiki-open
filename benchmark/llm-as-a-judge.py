@@ -1,7 +1,7 @@
 """
 LLM-as-a-Judge: Use LLM to score Q&A answers
 
-This script uses GPT-5 Responses API to score candidate answers based on five dimensions:
+This script uses OpenAI-compatible API (e.g. DashScope) to score candidate answers based on five dimensions:
 - Correctness
 - Completeness
 - Relevance
@@ -21,6 +21,9 @@ from openai import OpenAI
 from dotenv import load_dotenv
 
 load_dotenv()
+
+SCORE_KEYS = ["correctness", "completeness", "clarity", "relevance", "reasoning"]
+
 
 def get_eval_client() -> OpenAI:
     """Get evaluation client from environment variables"""
@@ -160,7 +163,7 @@ REQUIREMENT:
     No explanation, no extra text, no formatting other than valid JSON. Be strict and conservative with your scores."""
 
     try:
-        # Use GPT-5 Responses API for evaluation
+        # Use OpenAI-compatible API for evaluation
         response = eval_client.chat.completions.create(
             model=model,
             messages=[
@@ -175,10 +178,7 @@ REQUIREMENT:
                 }
             ],
             extra_body={
-                "thinking": {
-                    "include_thoughts": False,
-                    "budget_tokens": 1024
-                }
+                "enable_thinking": False
             },
         )
         
@@ -302,6 +302,33 @@ def find_answer_files(directory: str) -> List[str]:
     return sorted(answer_files)
 
 
+def print_score_averages(output_jsonl_path: str) -> None:
+    """Print average judge scores from a completed output JSONL file."""
+    totals = {key: 0 for key in SCORE_KEYS}
+    total_score_sum = 0
+    record_count = 0
+
+    with open(output_jsonl_path, 'r', encoding='utf-8') as fin:
+        for line in fin:
+            record = json.loads(line)
+            score = record["score"]
+            row_total = sum(score[key] for key in SCORE_KEYS)
+
+            for key in SCORE_KEYS:
+                totals[key] += score[key]
+            total_score_sum += row_total
+            record_count += 1
+
+    if record_count == 0:
+        print(f"No scored records found in: {output_jsonl_path}")
+        return
+
+    print(f"Average scores over {record_count} records:")
+    for key in SCORE_KEYS:
+        print(f"  {key}: {totals[key] / record_count:.2f}")
+    print(f"  total: {total_score_sum / record_count:.2f}")
+
+
 def evaluate_jsonl_parallel(
     candidate_jsonl_path: str,
     reference_jsonl_path: str,
@@ -387,6 +414,8 @@ def evaluate_jsonl_parallel(
     
     if not candidate_records:
         print("All questions have been processed, no need to continue")
+        if os.path.exists(output_jsonl_path):
+            print_score_averages(output_jsonl_path)
         return
     
     # Use file lock to ensure thread-safe writing
@@ -425,6 +454,7 @@ def evaluate_jsonl_parallel(
                 print(f"Error processing record: {e}")
     
     print(f"Scoring completed, processed {processed_count[0]} records in total, results saved in real-time to: {output_jsonl_path}")
+    print_score_averages(output_jsonl_path)
 
 
 def main() -> None:

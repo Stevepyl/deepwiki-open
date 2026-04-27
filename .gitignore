@@ -75,3 +75,4 @@ certs/
 UPDATE-PLAN.md
 /handbooks/
 benchmark/output/
+benchmark/candidate/
