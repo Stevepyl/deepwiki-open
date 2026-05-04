@@ -1,3 +1,13 @@
+---
+number: DOC-004
+name: DeepWiki Local Database Design
+description: Explains DeepWiki's FAISS-backed local storage, LocalDB tables, and cache files.
+update_at: 2026-05-04
+category: architecture
+language: zh-CN
+audience: developers-and-agents
+---
+
 # 数据库设计
 
 ## 概述

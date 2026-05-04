@@ -1,3 +1,13 @@
+---
+number: DOC-008
+name: FAISS Performance Capacity Analysis
+description: Analyzes repository size limits and memory constraints for DeepWiki's FAISS retrieval backend.
+update_at: 2026-05-04
+category: analysis
+language: zh-CN
+audience: developers-and-agents
+---
+
 # FAISS 性能容量分析
 
 ## 背景

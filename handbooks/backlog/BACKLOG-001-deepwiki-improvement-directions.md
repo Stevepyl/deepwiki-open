@@ -1,3 +1,13 @@
+---
+number: BACKLOG-001
+name: DeepWiki Improvement Directions
+description: Captures prioritized improvement opportunities across RAG quality, ingestion performance, architecture, deep research, and observability.
+update_at: 2026-05-04
+category: improvement-backlog
+language: zh-CN
+status: open
+---
+
 # DeepWiki 改进方向
 
 本文档记录在分析 RAG 流程、数据管道和系统架构后发现的可改进点，按优先级排列。

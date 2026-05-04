@@ -1,3 +1,14 @@
+---
+number: DOC-007
+name: Frontend Backend API Reference Chinese
+description: Chinese translation of the frontend-backend API boundary reference.
+update_at: 2026-05-04
+category: api-reference
+language: zh-CN
+audience: developers-and-agents
+translation_of: DOC-006
+---
+
 # 前端 ↔ 后端 API 参考
 
 本文档列出 DeepWiki-Open 中 Next.js 前端与 FastAPI 后端之间的 API 边界。内容涵盖浏览器可见路由、它们对应的 Python 后端路由、请求与响应结构、调用方，以及运行层面的注意事项。

@@ -1,3 +1,13 @@
+---
+number: DOC-002
+name: DeepWiki RAG System Design
+description: Documents the RAG pipeline, Document lifecycle, embedding cache behavior, and retrieval implementation details.
+update_at: 2026-05-04
+category: architecture
+language: zh-CN
+audience: developers-and-agents
+---
+
 # DeepWiki RAG 系统设计文档
 
 ## 概述
@@ -88,7 +98,7 @@ DatabaseManager._create_repo()
 ### 文档读取与过滤
 
 `read_all_documents()` 按优先级处理两类文件：
-    
+
 | 类型 | 扩展名 | Token 上限 |
 |------|--------|-----------|
 | 代码文件 | `.py .js .ts .java .cpp .go .rs .jsx .tsx .html .css .php .swift .cs` | 81,920 |

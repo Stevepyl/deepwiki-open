@@ -1,3 +1,13 @@
+---
+number: REC-001
+name: Agent Wiki Generation Backend
+description: Records the Path B backend implementation for two-stage agent-driven wiki generation and its WebSocket protocol.
+update_at: 2026-05-04
+category: implementation-record
+language: zh-CN
+status: recorded
+---
+
 # Agent Wiki 生成后端（路径 B）
 
 > 对应代码变更：`git diff HEAD` 中尚未 commit 的全部文件。

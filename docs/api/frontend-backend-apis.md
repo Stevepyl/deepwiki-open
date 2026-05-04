@@ -1,3 +1,13 @@
+---
+number: DOC-006
+name: Frontend Backend API Reference
+description: Maps browser-visible frontend routes to FastAPI backend endpoints, payloads, streaming behavior, and caveats.
+update_at: 2026-05-04
+category: api-reference
+language: en
+audience: developers-and-agents
+---
+
 # Frontend ↔ Backend API Reference
 
 This document lists the API boundary between the Next.js frontend and the FastAPI backend in DeepWiki-Open. It covers the browser-visible routes, the Python backend routes they reach, request and response shapes, callers, and operational caveats.
@@ -1018,4 +1028,3 @@ FastAPI allows all origins, methods, and headers. This helps local development a
 | WebSocket chat backend | `api/websocket_wiki.py` |
 | Agent wiki WebSocket backend | `api/agent/wiki_generator.py` |
 | Agent event models | `api/agent/stream_events.py` |
-

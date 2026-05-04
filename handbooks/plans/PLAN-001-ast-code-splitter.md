@@ -1,3 +1,13 @@
+---
+number: PLAN-001
+name: AST Code Splitter Improvement Plan
+description: Proposes replacing word-based splitting with an AST-aware code splitter while preserving the existing pipeline contract.
+update_at: 2026-05-04
+category: improvement-plan
+language: zh-CN
+status: proposed
+---
+
 # Splitter 改进方案：基于代码结构（AST）的切分
 
 ## 背景

@@ -1,3 +1,13 @@
+---
+number: DOC-003
+name: DeepWiki Agent Design
+description: Describes how DeepWiki implements agent-like behavior through its RAG components and request flow.
+update_at: 2026-05-04
+category: architecture
+language: zh-CN
+audience: developers-and-agents
+---
+
 # DeepWiki Agent 设计文档
 
 ## 1. 整体架构

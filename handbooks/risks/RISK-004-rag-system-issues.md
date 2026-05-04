@@ -1,3 +1,13 @@
+---
+number: RISK-004
+name: DeepWiki RAG System Issue List
+description: Records observed RAG system risks around skipped files, embedding cache provenance, validation gaps, and retrieval quality.
+update_at: 2026-05-04
+category: risk-record
+language: zh-CN
+status: open
+---
+
 # DeepWiki RAG 系统问题清单
 
 ---
@@ -209,4 +219,3 @@ prompt += f"<query>\n{query}\n</query>\n\nAssistant: "
 token limit fallback 中的 `simplified_prompt` 构建逻辑（`websocket_wiki.py:724-737` 与 `simple_chat.py:568-581`）同样完全重复。
 
 **影响**: 两个调用方独立维护上下文格式化代码，修改 prompt 格式时必须同步更新两处，且容易出现不同步导致行为不一致。`RAG` 类持有 `self.generator` 但不在 `call()` 中使用，语义上具有误导性。
-

@@ -1,3 +1,13 @@
+---
+number: REC-002
+name: DeepWiki Agent CLI Demo
+description: Records the local CLI demo used to smoke-test multi-turn agent Q&A and two-stage wiki generation.
+update_at: 2026-05-04
+category: implementation-record
+language: zh-CN
+status: recorded
+---
+
 # DeepWiki Agent CLI Demo
 
 > 对应代码：`cli/__init__.py`（空包标记）、`cli/deepwiki_cli.py`（单文件，~490 行）

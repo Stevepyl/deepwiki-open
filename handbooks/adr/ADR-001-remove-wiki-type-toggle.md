@@ -1,3 +1,13 @@
+---
+number: ADR-001
+name: Remove Wiki Generation Mode Toggle
+description: Records the proposed decision to remove the concise/comprehensive wiki generation mode toggle and default to comprehensive output.
+update_at: 2026-05-04
+category: architecture-decision-record
+language: en
+status: proposed
+---
+
 # ADR-001: Remove Wiki Generation Mode Toggle (Comprehensive vs Concise)
 
 **Status**: Proposed
