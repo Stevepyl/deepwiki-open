@@ -177,9 +177,9 @@ REQUIREMENT:
                     ]
                 }
             ],
-            extra_body={
-                "enable_thinking": False
-            },
+            # extra_body={
+            #     "enable_thinking": False
+            # },
         )
         
         # Extract response text from Responses API format

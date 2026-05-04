@@ -4,3 +4,4 @@ uv run -m benchmark.run_benchmark \
     --provider openai \
     --model qwen3.6-27b \
     https://github.com/astropy/astropy
+uv run benchmark/llm_as_a_judge.py
