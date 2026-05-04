@@ -1,6 +1,6 @@
 {
   "common": {
-    "appName": "DeepWiki-Open",
+    "appName": "OpsWiki",
     "tagline": "Documentação com IA",
     "generateWiki": "Gerar Wiki",
     "processing": "Processando...",
@@ -18,13 +18,13 @@
     "preparingDownload": "Aguarde enquanto preparamos seu download..."
   },
   "home": {
-    "welcome": "Bem-vindo ao DeepWiki-Open",
+    "welcome": "Bem-vindo ao OpsWiki",
     "welcomeTagline": "Documentação com IA para seus repositórios de código",
     "description": "Gere documentação completa a partir de repositórios GitHub, GitLab ou Bitbucket com apenas alguns cliques.",
     "quickStart": "Início Rápido",
     "enterRepoUrl": "Digite uma URL de repositório em um destes formatos:",
     "advancedVisualization": "Visualização Avançada com Diagramas Mermaid",
-    "diagramDescription": "O DeepWiki gera automaticamente diagramas interativos para ajudar você a entender a estrutura e os relacionamentos do código:",
+    "diagramDescription": "O OpsWiki gera automaticamente diagramas interativos para ajudar você a entender a estrutura e os relacionamentos do código:",
     "flowDiagram": "Diagrama de Fluxo",
     "sequenceDiagram": "Diagrama de Sequência"
   },
@@ -93,7 +93,7 @@
     "authorizationRequired": "A autenticação é necessária para gerar a wiki."
   },
   "footer": {
-    "copyright": "DeepWiki - Documentação com IA para repositórios de código"
+    "copyright": "OpsWiki - Documentação com IA para repositórios de código"
   },
   "ask": {
     "placeholder": "Faça uma pergunta sobre este repositório...",

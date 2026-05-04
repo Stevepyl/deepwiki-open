@@ -1,6 +1,6 @@
 {
   "common": {
-    "appName": "DeepWiki-Open",
+    "appName": "OpsWiki",
     "tagline": "AI駆動のドキュメンテーション",
     "generateWiki": "Wikiを生成",
     "processing": "処理中...",
@@ -18,13 +18,13 @@
     "preparingDownload": "ダウンロードの準備中です..."
   },
   "home": {
-    "welcome": "DeepWikiへようこそ",
+    "welcome": "OpsWikiへようこそ",
     "welcomeTagline": "コードリポジトリのためのAI駆動ドキュメンテーション",
     "description": "GitHub、GitLab、またはBitbucketリポジトリから包括的なドキュメントを数クリックで生成します。",
     "quickStart": "クイックスタート",
     "enterRepoUrl": "以下のいずれかの形式でリポジトリURLを入力してください：",
     "advancedVisualization": "Mermaidダイアグラムによる高度な可視化",
-    "diagramDescription": "DeepWikiは、コード構造と関係を理解するのに役立つインタラクティブな図を自動的に生成します：",
+    "diagramDescription": "OpsWikiは、コード構造と関係を理解するのに役立つインタラクティブな図を自動的に生成します：",
     "flowDiagram": "フロー図",
     "sequenceDiagram": "シーケンス図"
   },
@@ -84,7 +84,7 @@
     "authorizationRequired": "Wiki生成には認証コードが必要です"
   },
   "footer": {
-    "copyright": "DeepWiki - コードリポジトリのためのAI駆動ドキュメンテーション"
+    "copyright": "OpsWiki - コードリポジトリのためのAI駆動ドキュメンテーション"
   },
   "ask": {
     "placeholder": "このリポジトリについて質問する...",
