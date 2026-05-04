@@ -69,7 +69,10 @@ next-env.d.ts
 certs/
 
 # Claude Code local settings (may contain API keys, personal paths)
-.claude/settings.local.json
+.claude/
+.codex/
+CLAUDE.md
+AGENTS.md
 
 # Development plans
 UPDATE-PLAN.md
