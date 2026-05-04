@@ -1,0 +1,52 @@
+[
+  {
+    "name": "Remove Wiki Generation Mode Toggle",
+    "number": "ADR-001",
+    "description": "Records the proposed decision to remove the concise/comprehensive wiki generation mode toggle and default to comprehensive output."
+  },
+  {
+    "name": "AST Code Splitter Improvement Plan",
+    "number": "PLAN-001",
+    "description": "Proposes replacing word-based splitting with an AST-aware code splitter while preserving the existing pipeline contract."
+  },
+  {
+    "name": "Agent Wiki Generation Backend",
+    "number": "REC-001",
+    "description": "Records the Path B backend implementation for two-stage agent-driven wiki generation and its WebSocket protocol."
+  },
+  {
+    "name": "DeepWiki Agent CLI Demo",
+    "number": "REC-002",
+    "description": "Records the local CLI demo used to smoke-test multi-turn agent Q&A and two-stage wiki generation."
+  },
+  {
+    "name": "Agent WebSocket Input Validation",
+    "number": "RISK-001",
+    "description": "Records the role-part invariant gap at the external agent WebSocket boundary and the recommended validation strategy."
+  },
+  {
+    "name": "Bash Agent Sandbox Gap",
+    "number": "RISK-002",
+    "description": "Records the shell execution risks introduced by the wiki-writer bash tool and the staged mitigation roadmap."
+  },
+  {
+    "name": "Repository Cache Key Collision",
+    "number": "RISK-003",
+    "description": "Records the cache key collision risk caused by owner-repo naming across hosts, forks, and private repositories."
+  },
+  {
+    "name": "DeepWiki RAG System Issue List",
+    "number": "RISK-004",
+    "description": "Records observed RAG system risks around skipped files, embedding cache provenance, validation gaps, and retrieval quality."
+  },
+  {
+    "name": "DeepWiki Improvement Directions",
+    "number": "BACKLOG-001",
+    "description": "Captures prioritized improvement opportunities across RAG quality, ingestion performance, architecture, deep research, and observability."
+  },
+  {
+    "name": "RAG to Wiki Call Chain Handbook",
+    "number": "HBK-001",
+    "description": "Explains how repository code becomes structured wiki output through request handling, retrieval, prompting, and rendering."
+  }
+]

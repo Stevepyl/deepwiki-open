@@ -1,0 +1,42 @@
+[
+  {
+    "name": "DeepWiki-Open RAG System Overview",
+    "number": "DOC-001",
+    "description": "Explains the end-to-end RAG architecture, data flow, provider boundaries, and operational behavior."
+  },
+  {
+    "name": "DeepWiki RAG System Design",
+    "number": "DOC-002",
+    "description": "Documents the RAG pipeline, Document lifecycle, embedding cache behavior, and retrieval implementation details."
+  },
+  {
+    "name": "DeepWiki Agent Design",
+    "number": "DOC-003",
+    "description": "Describes how DeepWiki implements agent-like behavior through its RAG components and request flow."
+  },
+  {
+    "name": "DeepWiki Local Database Design",
+    "number": "DOC-004",
+    "description": "Explains DeepWiki's FAISS-backed local storage, LocalDB tables, and cache files."
+  },
+  {
+    "name": "AdalFlow Integration Notes",
+    "number": "DOC-005",
+    "description": "Placeholder for documenting how DeepWiki integrates AdalFlow components."
+  },
+  {
+    "name": "Frontend Backend API Reference",
+    "number": "DOC-006",
+    "description": "Maps browser-visible frontend routes to FastAPI backend endpoints, payloads, streaming behavior, and caveats."
+  },
+  {
+    "name": "Frontend Backend API Reference Chinese",
+    "number": "DOC-007",
+    "description": "Chinese translation of the frontend-backend API boundary reference."
+  },
+  {
+    "name": "FAISS Performance Capacity Analysis",
+    "number": "DOC-008",
+    "description": "Analyzes repository size limits and memory constraints for DeepWiki's FAISS retrieval backend."
+  }
+]
