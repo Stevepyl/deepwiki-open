@@ -17,13 +17,11 @@
     "number": "PLAN-002",
     "path": "PLAN-002-frontend-refinement-overview.md",
     "plan_status": "proposed",
-    "implementation_status": "not-started",
+    "implementation_status": "in-progress",
     "evidence": [
-      "Plan frontmatter declares status: proposed.",
-      "src/app/layout.tsx still loads ThemeProvider.",
-      "src/app/page.tsx still renders the DeepWiki welcome.",
-      "No src/components/shell/ folder exists.",
-      "Plan text now records the PLAN-007 agent-chat connector boundary."
+      "PLAN-003 is implemented in src_v2.",
+      "PLAN-004 through PLAN-006 remain not-started.",
+      "The legacy src/ frontend remains untouched per the overview non-goal."
     ],
     "sub_tasks": []
   },
@@ -31,39 +29,42 @@
     "name": "Foundation Design Tokens and App Shell",
     "number": "PLAN-003",
     "path": "PLAN-003-foundation.md",
-    "plan_status": "proposed",
-    "implementation_status": "not-started",
+    "plan_status": "implemented",
+    "implementation_status": "implemented",
     "evidence": [
-      "Plan frontmatter declares status: proposed.",
-      "src/app/globals.css still carries dark-mode tokens.",
-      "src/components/ConfigurationModal.tsx and src/components/theme-toggle.tsx are still present.",
-      "No src/components/shell/ folder exists."
+      "Plan frontmatter declares status: implemented.",
+      "src_v2/app/globals.css contains the Paper and Ink token set, shell/composer styles, SettingsPanel styles, markdown styles, and the 1100px wiki responsive guard.",
+      "src_v2/app/layout.tsx mounts LanguageProvider and SettingsProvider without ThemeProvider.",
+      "src_v2/components/shell/ contains AppShell, Sidebar, Topbar, Composer, Wordmark, SettingsPanel, IconButton, Switcher, Eyebrow, and DayDivider.",
+      "src_v2/messages/en.ts centralizes shell copy while LanguageContext plumbing remains mounted.",
+      "Shared renderers, utility connectors, hook, context, types, and the agent-stream route are copied into src_v2 with self-contained imports.",
+      "bun run lint and bun run build pass with existing warnings only."
     ],
     "sub_tasks": [
       {
         "name": "Token rewrite of globals.css",
-        "status": "not-started",
-        "notes": "Plan step 1; blocks every other shell task."
+        "status": "implemented",
+        "notes": "src_v2/app/globals.css registers Paper and Ink tokens, global defaults, wordmark styles, shell/composer chrome, markdown styles, and the 1100px responsive guard."
       },
       {
         "name": "Build shared shell components under src_v2/components/shell/",
-        "status": "not-started",
-        "notes": "Includes AppShell, Sidebar, Topbar, Composer, Wordmark, SettingsPanel."
+        "status": "implemented",
+        "notes": "Includes AppShell, Sidebar, Topbar, Composer, Wordmark, SettingsPanel, IconButton, Switcher, Eyebrow, and DayDivider."
       },
       {
         "name": "Copy shared legacy chat and agent-chat connector files into src_v2",
-        "status": "not-started",
-        "notes": "Preserve createChatWebSocket, createAgentChatWebSocket, agentChatStream, and agentChat types."
+        "status": "implemented",
+        "notes": "Preserves createChatWebSocket, createAgentChatWebSocket, streamAgentChatHttp, and agentChat types with self-contained src_v2 imports."
       },
       {
         "name": "Introduce SettingsContext and useConversationHistory",
-        "status": "not-started",
-        "notes": "Feeds PLAN-005 and PLAN-006."
+        "status": "implemented",
+        "notes": "SettingsContext persists opswiki.* settings; useConversationHistory powers the sidebar tree and removes stale deepwiki.* keys on read."
       },
       {
-        "name": "Delete orphaned components",
-        "status": "not-started",
-        "notes": "Final commit of the plan — theme-toggle, ConfigurationModal, ModelSelectionModal, WikiTypeSelector, UserSelector, TokenInput, ProcessedProjects."
+        "name": "Preserve legacy src/ while adding src_v2 foundation",
+        "status": "implemented",
+        "notes": "Existing src/ pages and components are untouched, matching PLAN-002 and PLAN-003 scope."
       }
     ]
   },
@@ -77,7 +78,8 @@
       "Plan frontmatter declares status: proposed.",
       "src/app/page.tsx is 627 lines rendering the current home.",
       "src/app/wiki/projects/page.tsx is the active projects route.",
-      "src/app/projects/ does not exist."
+      "src/app/projects/ does not exist.",
+      "Plan now carries a Tailwind-first styling rule aligned with PLAN-005 and PLAN-006."
     ],
     "sub_tasks": [
       {
@@ -101,7 +103,8 @@
     "evidence": [
       "Plan frontmatter declares status: proposed.",
       "src/app/[owner]/[repo]/ask/page.tsx (583 lines) still uses AskComposer and AskResultView.",
-      "PLAN-007 connector files exist for the rewrite."
+      "PLAN-007 connector files exist for the rewrite.",
+      "Plan now carries a Tailwind-first styling rule aligned with PLAN-004 and PLAN-006."
     ],
     "sub_tasks": [
       {
@@ -132,7 +135,8 @@
       "src/app/[owner]/[repo]/page.tsx is 2267 lines.",
       "src/components/WikiTreeView.tsx is still the TOC.",
       "No src/components/generation/ folder exists.",
-      "Plan text keeps wiki-family generation on raw-text /ws/chat rather than agent-chat events."
+      "Plan text keeps wiki-family generation on raw-text /ws/chat rather than agent-chat events.",
+      "Plan now carries a Tailwind-first styling rule aligned with PLAN-004 and PLAN-005."
     ],
     "sub_tasks": [
       {

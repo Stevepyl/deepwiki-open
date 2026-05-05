@@ -27,6 +27,14 @@ Use `agent_name: "explore"` by default. Map the deep-research mode to `agent_nam
 
 All new code is written to `src_v2/`. The existing `src/` is left untouched.
 
+## Styling rule — Tailwind-first
+
+Write all new markup with Tailwind utility classes referencing the Paper and Ink tokens registered by PLAN-003's `@theme` block in `src_v2/app/globals.css`. Example: `className="bg-[var(--paper)] text-[var(--ink-primary)] max-w-[760px] mx-auto"`.
+
+Fall back to prototype CSS class names (e.g. `.chat-stream`, `.message`, `.citation`, `.tool-event`) only when Tailwind cannot express the rule cleanly — paper-grain pseudo-elements, multi-line citation pill layouts, or the running-tool shimmer animation. When you do fall back, colocate the rule in `globals.css` under a clearly labeled section; do not create per-component CSS files.
+
+Never introduce new dark-mode selectors or `data-theme` branches. Tokens drive the palette.
+
 ## Target file
 
 `src_v2/app/[owner]/[repo]/ask/page.tsx` — new file, target under 200 lines.

@@ -25,6 +25,14 @@ All new code is written to `src_v2/`. The existing `src/` files are left untouch
 
 PLAN-007 added structured agent chat connectors for PLAN-005. This wiki-family plan does not switch wiki/workshop/slides generation to agent chat. Keep using the legacy raw-text `/ws/chat` generation path unless a later plan explicitly migrates these routes to `/ws/agent-wiki`.
 
+## Styling rule — Tailwind-first
+
+Write all new markup across wiki, workshop, slides, and generation-loader components with Tailwind utility classes referencing the Paper and Ink tokens registered by PLAN-003's `@theme` block in `src_v2/app/globals.css`. Example: `className="grid grid-cols-[240px_1fr] gap-6 text-[var(--ink-primary)]"`.
+
+Fall back to prototype CSS class names (e.g. `.wiki-toc`, `.wiki-article`, `.workshop-exercise`, `.slide-card`, `.log-line`, `.hairline-progress`) only when Tailwind cannot express the rule cleanly — paper-panel backgrounds, hairline borders with gradient, slide-stage perspective transforms, Mermaid sizing overrides, or the log auto-scroll animation. When you do fall back, colocate the rule in `globals.css` under a clearly labeled section; do not create per-component CSS files.
+
+Never introduce new dark-mode selectors or `data-theme` branches. Tokens drive the palette.
+
 ## Shared behavior
 
 - All three interactive routes (wiki, workshop, slides) first call `GET /api/wiki_cache`. If a cache exists, render immediately. If not, redirect to `/[owner]/[repo]?status=generating` — which mounts the loading screen and triggers generation.

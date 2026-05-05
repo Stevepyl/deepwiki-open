@@ -19,6 +19,14 @@ Two entry points. `src/app/page.tsx` is 627 lines of demo-diagrams, processed-pr
 
 This plan builds both routes in `src_v2/`, reusing the `useProcessedProjects` hook (copied in PLAN-003) and the shell primitives from PLAN-003. The existing `src/` files are left untouched.
 
+## Styling rule — Tailwind-first
+
+Write all new markup with Tailwind utility classes referencing the Paper and Ink tokens registered by PLAN-003's `@theme` block in `src_v2/app/globals.css`. Example: `className="bg-[var(--paper)] text-[var(--ink-primary)] px-6 py-4 rounded-[var(--radius-md)]"`.
+
+Fall back to prototype CSS class names (e.g. `.welcome`, `.scratch-input`, `.paper-panel`) only when Tailwind cannot express the rule cleanly — non-trivial pseudo-elements, complex gradients/filters, or the paper-scratch texture layers. When you do fall back, colocate the rule in `globals.css` under a clearly labeled section; do not create per-component CSS files.
+
+Never introduce new dark-mode selectors or `data-theme` branches. Tokens drive the palette.
+
 ## Welcome page
 
 ### Target file
@@ -27,7 +35,7 @@ This plan builds both routes in `src_v2/`, reusing the `useProcessedProjects` ho
 
 ### Structure
 
-- Root: `<main className="welcome">`. Uses CSS already provided by the prototype tokens in `globals.css`; no Tailwind utility classes except for small layout helpers.
+- Root: `<main>` styled with Tailwind utilities mapped to Paper and Ink tokens (per the styling rule above). Use the `.welcome` prototype class only if a layered background or pseudo-element rule cannot be reproduced with utilities.
 - Top-left strip:
   - "OpsWiki · v0 prototype" eyebrow (see `prototype/index.html:12`).
   - Right-side `All projects →` link to `/projects`.
