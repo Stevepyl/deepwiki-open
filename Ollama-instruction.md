@@ -76,7 +76,6 @@ npm run dev
 3. Check the use "Local Ollama Model" option
 4. Click "Generate Wiki"
 
-![Ollama Option](screenshots/Ollama.png)
 
 ## Alternative using Dockerfile
 

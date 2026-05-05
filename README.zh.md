@@ -1,18 +1,11 @@
-# DeepWiki-Open
+# OpsWiki
 
-![DeepWiki 横幅](screenshots/Deepwiki.png)
-
-**DeepWiki**可以为任何GitHub、GitLab或BitBucket代码仓库自动创建美观、交互式的Wiki！只需输入仓库名称，DeepWiki将：
+**OpsWiki**可以为任何GitHub、GitLab或BitBucket代码仓库自动创建美观、交互式的Wiki！只需输入仓库名称，DeepWiki将：
 
 1. 分析代码结构
 2. 生成全面的文档
 3. 创建可视化图表解释一切如何运作
 4. 将所有内容整理成易于导航的Wiki
-
-[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://buymeacoffee.com/sheing)
-
-[![Twitter/X](https://img.shields.io/badge/Twitter-1DA1F2?style=for-the-badge&logo=twitter&logoColor=white)](https://x.com/sashimikun_void)
-[![Discord](https://img.shields.io/badge/Discord-7289DA?style=for-the-badge&logo=discord&logoColor=white)](https://discord.com/invite/VQMBGR8u5v)
 
 [English](./README.md) | [简体中文](./README.zh.md) | [繁體中文](./README.zh-tw.md) | [日本語](./README.ja.md) | [Español](./README.es.md) | [한국어](./README.kr.md) | [Tiếng Việt](./README.vi.md) | [Português Brasileiro](./README.pt-br.md) | [Français](./README.fr.md) | [Русский](./README.ru.md)
 
@@ -195,23 +188,6 @@ deepwiki/
   3. **最终结论**：基于所有迭代提供全面答案
 
 要使用深度研究，只需在提交问题前在提问界面中切换"深度研究"开关。
-
-## 📱 截图
-
-![DeepWiki主界面](screenshots/Interface.png)
-*DeepWiki的主界面*
-
-![私有仓库支持](screenshots/privaterepo.png)
-*使用个人访问令牌访问私有仓库*
-
-![深度研究功能](screenshots/DeepResearch.png)
-*深度研究为复杂主题进行多轮调查*
-
-### 演示视频
-
-[![DeepWiki演示视频](https://img.youtube.com/vi/zGANs8US8B4/0.jpg)](https://youtu.be/zGANs8US8B4)
-
-*观看DeepWiki实际操作！*
 
 ## ❓ 故障排除
 
