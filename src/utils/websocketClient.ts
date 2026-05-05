@@ -3,7 +3,7 @@
  * This replaces the HTTP streaming endpoint with a WebSocket connection
  */
 
-import type { AgentChatEvent, AgentChatRequest } from '@/types/agentChat';
+import type { AgentChatEvent, AgentChatRequest } from '../types/agentChat';
 
 // Get the server base URL from environment or use default
 const SERVER_BASE_URL = process.env.SERVER_BASE_URL || 'http://localhost:8001';

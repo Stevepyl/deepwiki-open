@@ -1,4 +1,4 @@
-import type { AgentChatEvent, AgentChatRequest } from '@/types/agentChat';
+import type { AgentChatEvent, AgentChatRequest } from '../types/agentChat';
 
 export async function streamAgentChatHttp(
   request: AgentChatRequest,

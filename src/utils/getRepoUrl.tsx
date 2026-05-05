@@ -1,4 +1,4 @@
-import RepoInfo from "@/types/repoinfo";
+import RepoInfo from "../types/repoinfo";
 
 export default function getRepoUrl(repoInfo: RepoInfo): string {
   console.log('getRepoUrl', repoInfo);
