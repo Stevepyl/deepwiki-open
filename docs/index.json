@@ -38,5 +38,10 @@
     "name": "FAISS Performance Capacity Analysis",
     "number": "DOC-008",
     "description": "Analyzes repository size limits and memory constraints for DeepWiki's FAISS retrieval backend."
+  },
+  {
+    "name": "Astropy Low Score Benchmark Analysis Chinese",
+    "number": "DOC-009",
+    "description": "Chinese analysis of the lowest non-anomalous Astropy benchmark answers by comparing eval scores, raw outputs, and ground truth references."
   }
 ]

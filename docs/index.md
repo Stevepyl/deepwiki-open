@@ -28,5 +28,6 @@ Read this index first when looking for project documentation.
 ## Analysis
 
 - [faiss-capacity-analysis](analysis/faiss-capacity-analysis.md) - Analyzes repository size limits and memory constraints for DeepWiki's FAISS retrieval backend.
+- [astropy-low-score-benchmark-analysis](analysis/astropy-low-score-benchmark-analysis.md) - Chinese analysis of the lowest non-anomalous Astropy benchmark answers by comparing eval scores, raw outputs, and ground truth references.
 
 - [openai-agents-sdk](./openai-agent-sdk-docs/) - docs of the openai-agent-sdk (package `openai-agents`)
