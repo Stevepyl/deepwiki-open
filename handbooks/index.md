@@ -2,7 +2,7 @@
 number: HBK-INDEX
 name: Handbooks Index
 description: Index of development plans, decisions, records, risks, backlog notes, and handbook guides under handbooks.
-update_at: 2026-05-04
+update_at: 2026-05-05
 category: index
 language: en
 audience: developers-and-agents
@@ -18,6 +18,7 @@ Read this index first when looking for plans, decisions, implementation records,
 
 ## Plans
 
+- [PLAN-INDEX](plans/index.md) - Tracks implementation status for plans and their sub-tasks under handbooks/plans.
 - [PLAN-001-ast-code-splitter](plans/PLAN-001-ast-code-splitter.md) - Proposes replacing word-based splitting with an AST-aware code splitter while preserving the existing pipeline contract.
 
 ## Implementation Records

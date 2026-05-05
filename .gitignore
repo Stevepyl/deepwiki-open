@@ -68,11 +68,13 @@ next-env.d.ts
 # ignore adding self-signed certs
 certs/
 
-# Claude Code local settings (may contain API keys, personal paths)
+# Claude Code local settings and hook scripts (may contain API keys, personal paths)
 .claude/
 .codex/
+.scripts/
 CLAUDE.md
 AGENTS.md
+
 
 # Development plans
 UPDATE-PLAN.md
@@ -81,3 +83,6 @@ benchmark/candidate/
 
 # prototype of frontend
 prototype/
+
+# OpenAI Agents SDK mirrored docs (auto-fetched)
+docs/openai-agent-sdk-docs/

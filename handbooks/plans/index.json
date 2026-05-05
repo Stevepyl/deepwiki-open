@@ -1,0 +1,15 @@
+[
+  {
+    "name": "AST Code Splitter Improvement Plan",
+    "number": "PLAN-001",
+    "path": "PLAN-001-ast-code-splitter.md",
+    "plan_status": "proposed",
+    "implementation_status": "not-started",
+    "evidence": [
+      "Plan frontmatter declares status: proposed.",
+      "api/data_pipeline.py still imports TextSplitter.",
+      "prepare_data_pipeline still constructs TextSplitter(**configs[\"text_splitter\"])."
+    ],
+    "sub_tasks": []
+  }
+]

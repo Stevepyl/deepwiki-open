@@ -28,3 +28,5 @@ Read this index first when looking for project documentation.
 ## Analysis
 
 - [faiss-capacity-analysis](analysis/faiss-capacity-analysis.md) - Analyzes repository size limits and memory constraints for DeepWiki's FAISS retrieval backend.
+
+- [openai-agents-sdk](./openai-agent-sdk-docs/) - docs of the openai-agent-sdk (package `openai-agents`)

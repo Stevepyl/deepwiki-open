@@ -5,6 +5,11 @@
     "description": "Records the proposed decision to remove the concise/comprehensive wiki generation mode toggle and default to comprehensive output."
   },
   {
+    "name": "Plans Index",
+    "number": "PLAN-INDEX",
+    "description": "Tracks implementation status for plans and their sub-tasks under handbooks/plans."
+  },
+  {
     "name": "AST Code Splitter Improvement Plan",
     "number": "PLAN-001",
     "description": "Proposes replacing word-based splitting with an AST-aware code splitter while preserving the existing pipeline contract."
