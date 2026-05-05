@@ -1,7 +1,7 @@
 ---
 number: PLAN-006
 name: Wiki Workshop Slides and Loading
-description: Rewrites the wiki reading view, workshop view, slides presenter, and the generation loading screen to match the OpsWiki prototypes.
+description: Rewrites the wiki reading view, workshop view, slides presenter, and generation loading screen to match the OpsWiki prototypes while preserving the legacy wiki-generation stream contract.
 update_at: 2026-05-06
 category: improvement-plan
 language: en
@@ -23,10 +23,12 @@ The prototype introduces four distinct surfaces for these: `app-wiki.html`, `app
 
 All new code is written to `src_v2/`. The existing `src/` files are left untouched. This plan groups the wiki family because they share data sources (`GET /api/wiki_cache`, `WebSocket /ws/chat`) and the cached `WikiStructure` from `src_v2/types/wiki/` (copied from `src/` in PLAN-003).
 
+PLAN-007 added structured agent chat connectors for PLAN-005. This wiki-family plan does not switch wiki/workshop/slides generation to agent chat. Keep using the legacy raw-text `/ws/chat` generation path unless a later plan explicitly migrates these routes to `/ws/agent-wiki`.
+
 ## Shared behavior
 
 - All three interactive routes (wiki, workshop, slides) first call `GET /api/wiki_cache`. If a cache exists, render immediately. If not, redirect to `/[owner]/[repo]?status=generating` — which mounts the loading screen and triggers generation.
-- Generation itself uses `WebSocket /ws/chat` following the structure-then-pages pattern described in `docs/api/frontend-backend-apis.md` §6.2. On completion, `POST /api/wiki_cache` persists the result.
+- Generation itself uses `WebSocket /ws/chat` following the structure-then-pages pattern described in `docs/api/frontend-backend-apis.md` §6.2. On completion, `POST /api/wiki_cache` persists the result. Do not parse `/ws/chat` as `AgentChatEvent`; it streams raw text.
 - All three routes read the cached `WikiStructure` shape (see `docs/api/frontend-backend-apis.md` §3). Types are defined in `src_v2/types/wiki/wikistructure.tsx` and `src_v2/types/wiki/wikipage.tsx` (copied from `src/` in PLAN-003).
 
 ## Sub-route 1 — Wiki reading view
@@ -161,9 +163,9 @@ None — `src/` is left untouched. `src/components/WikiTreeView.tsx` and any inl
 - `src_v2/app/[owner]/[repo]/slides/page.tsx` — new
 - `src_v2/components/wiki/*`, `src_v2/components/workshop/*`, `src_v2/components/slides/*`, `src_v2/components/generation/*` — new
 - `src_v2/components/Markdown.tsx`, `src_v2/components/Mermaid.tsx` — copied from `src/` in PLAN-003
-- `src_v2/utils/websocketClient.ts` — copied from `src/` in PLAN-003
+- `src_v2/utils/websocketClient.ts` — copied from `src/` in PLAN-003; use `createChatWebSocket` for wiki-family raw text generation, not `createAgentChatWebSocket`
 - `src_v2/hooks/useGenerationPhases.ts` — new
-- `docs/api/frontend-backend-apis.md` §4.7, §4.8, §4.9, §4.10, §5.1, §6.2, §6.4 — contract
+- `docs/api/frontend-backend-apis.md` §4.7, §4.8, §4.9, §4.10, §5.1, §5.3, §6.2, §6.4 — contract boundaries; §5.3 is documented to avoid confusing agent chat with wiki generation
 
 ## Verification
 
@@ -184,6 +186,7 @@ In addition to the PLAN-002 shared harness:
 ## Risks
 
 - **Phase regex brittleness.** The phase parser (PLAN-002 D6) depends on backend text formatting. If the backend log strings change, phases silently stop advancing. Mitigation: fall back to an indeterminate progress bar that animates regardless of parser state; do not block navigation on phase detection.
+- **Agent-chat protocol mismatch.** PLAN-007's `/ws/agent-chat` emits structured tool events for Ask; this plan's loading/wiki/workshop/slides flows still consume raw text from `/ws/chat`. Accidentally switching the loader to `createAgentChatWebSocket` will break phase parsing and cache persistence.
 - **Workshop and slides regenerate on every visit.** Current backend does not persist them. Local cache per `${repoKey}.${language}` hides this cost on revisits but first-time users still wait. Accept in v1; an agent-wiki extension can add structured persistence later.
 - **Mermaid rendering on slides.** `<Mermaid>` sizes diagrams to container width; on a 16:9 slide, large diagrams overflow. Add a `maxHeight` prop to clip and provide a fullscreen zoom as today's `<Mermaid>` already does.
 - **Cache-key collision.** Per RISK-003, `owner/repo` without host can collide across GitHub/GitLab/Bitbucket. This plan does not fix that — it inherits the risk. Surface the repo type in the topbar breadcrumb so users notice a mismatch.

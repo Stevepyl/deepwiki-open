@@ -17,12 +17,12 @@
   {
     "name": "OpsWiki Frontend Refinement Overview",
     "number": "PLAN-002",
-    "description": "Cross-cutting plan that ties together the four sub-plans rebranding the frontend to the OpsWiki Paper and Ink prototype while preserving the existing FastAPI contract."
+    "description": "Cross-cutting plan that ties together the four sub-plans rebranding the frontend while preserving legacy chat, agent-chat, and wiki contracts."
   },
   {
     "name": "Foundation Design Tokens and App Shell",
     "number": "PLAN-003",
-    "description": "Replaces the dark-mode token set with the prototype Paper and Ink tokens, rebuilds the shared app shell, and deletes obsolete configuration modals."
+    "description": "Replaces the dark-mode token set with Paper and Ink tokens, rebuilds the shared app shell, and preserves shared chat/agent-chat connectors."
   },
   {
     "name": "Welcome and Projects Directory",
@@ -32,12 +32,22 @@
   {
     "name": "Chat View",
     "number": "PLAN-005",
-    "description": "Rewrites the Ask route into a chat-stream UI that matches the prototype, reusing the WebSocket client and Markdown renderer."
+    "description": "Rewrites the Ask route into a chat-stream UI using the structured agent-chat connectors from PLAN-007."
   },
   {
     "name": "Wiki Workshop Slides and Loading",
     "number": "PLAN-006",
-    "description": "Rewrites the wiki reading view, workshop view, slides presenter, and the generation loading screen to match the OpsWiki prototypes."
+    "description": "Rewrites the wiki reading view, workshop view, slides presenter, and loading screen while keeping legacy /ws/chat generation separate from agent chat."
+  },
+  {
+    "name": "Agent Chat Backend API",
+    "number": "PLAN-007",
+    "description": "Exposes the existing agent infrastructure through WebSocket and HTTP chat APIs with frontend connector utilities."
+  },
+  {
+    "name": "RAG Retrieval as an Agent Tool",
+    "number": "PLAN-008",
+    "description": "Extracts RAG retrieval into a small CodeRetriever and exposes it to the agent as a rag_search tool, reusing the existing pickle cache."
   },
   {
     "name": "Agent Wiki Generation Backend",

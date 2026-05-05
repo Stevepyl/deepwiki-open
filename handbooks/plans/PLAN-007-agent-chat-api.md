@@ -2,7 +2,7 @@
 number: PLAN-007
 name: Agent Chat Backend API
 description: Expose the existing agent infrastructure as a chat API parallel to /ws/chat and /chat/completions/stream, with WebSocket + HTTP transports and minimal frontend connectors.
-status: proposed
+status: implemented
 update_at: 2026-05-06
 category: plan
 language: en

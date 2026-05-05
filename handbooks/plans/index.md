@@ -26,12 +26,13 @@ Read this index before opening individual plans when you need current implementa
 | Plan | Plan Status | Implementation Status | Evidence | Sub-task Status |
 |---|---|---|---|---|
 | [PLAN-001 - AST Code Splitter Improvement Plan](PLAN-001-ast-code-splitter.md) | `proposed` | `not-started` | Plan frontmatter is `status: proposed`; `api/data_pipeline.py` still imports `TextSplitter` and `prepare_data_pipeline` still constructs `TextSplitter(**configs["text_splitter"])`. | No explicit sub-tasks recorded. |
-| [PLAN-002 - OpsWiki Frontend Refinement Overview](PLAN-002-frontend-refinement-overview.md) | `proposed` | `not-started` | Plan frontmatter is `status: proposed`; `src/app/layout.tsx` still loads `ThemeProvider`; `src/app/page.tsx` still renders the DeepWiki welcome; no `src/components/shell/` folder exists. | Cross-cutting plan; sub-tasks live in PLAN-003 through PLAN-006. |
-| [PLAN-003 - Foundation Design Tokens and App Shell](PLAN-003-foundation.md) | `proposed` | `not-started` | Plan frontmatter is `status: proposed`; `src/app/globals.css` still carries dark-mode tokens; `src/components/ConfigurationModal.tsx` and `src/components/theme-toggle.tsx` are still present. | Blocks PLAN-004, PLAN-005, PLAN-006. |
+| [PLAN-002 - OpsWiki Frontend Refinement Overview](PLAN-002-frontend-refinement-overview.md) | `proposed` | `not-started` | Plan frontmatter is `status: proposed`; `src/app/layout.tsx` still loads `ThemeProvider`; `src/app/page.tsx` still renders the DeepWiki welcome; no `src/components/shell/` folder exists; plan text now records the PLAN-007 agent-chat connector boundary. | Cross-cutting plan; sub-tasks live in PLAN-003 through PLAN-006. |
+| [PLAN-003 - Foundation Design Tokens and App Shell](PLAN-003-foundation.md) | `proposed` | `not-started` | Plan frontmatter is `status: proposed`; `src/app/globals.css` still carries dark-mode tokens; `src/components/ConfigurationModal.tsx` and `src/components/theme-toggle.tsx` are still present. | Blocks PLAN-004, PLAN-005, PLAN-006; owns copying shared chat/agent-chat connector files into `src_v2`. |
 | [PLAN-004 - Welcome and Projects Directory](PLAN-004-welcome-and-projects.md) | `proposed` | `not-started` | Plan frontmatter is `status: proposed`; `src/app/page.tsx` is 627 lines rendering the current home; `src/app/wiki/projects/page.tsx` is the active projects route and `src/app/projects/` does not exist. | Depends on PLAN-003. |
-| [PLAN-005 - Chat View](PLAN-005-chat-view.md) | `proposed` | `not-started` | Plan frontmatter is `status: proposed`; `src/app/[owner]/[repo]/ask/page.tsx` (583 lines) still uses `AskComposer` and `AskResultView`. | Depends on PLAN-003. |
-| [PLAN-006 - Wiki Workshop Slides and Loading](PLAN-006-wiki-family.md) | `proposed` | `not-started` | Plan frontmatter is `status: proposed`; `src/app/[owner]/[repo]/page.tsx` is 2267 lines and `src/components/WikiTreeView.tsx` is still the TOC; no `src/components/generation/` folder exists. | Depends on PLAN-003. |
-| [PLAN-007 - Agent Chat Backend API](PLAN-007-agent-chat-api.md) | `proposed` | `not-started` | Plan frontmatter is `status: proposed`; no `api/agent/chat_handler.py` exists; `/ws/agent-chat` route is not registered in `api/api.py`. | 10 sub-tasks (helper extraction, chat handler, WS+HTTP routes, agent info, tests, 4 frontend files). |
+| [PLAN-005 - Chat View](PLAN-005-chat-view.md) | `proposed` | `not-started` | Plan frontmatter is `status: proposed`; `src/app/[owner]/[repo]/ask/page.tsx` (583 lines) still uses `AskComposer` and `AskResultView`; PLAN-007 connector files exist for the rewrite. | Depends on PLAN-003 and PLAN-007's implemented connector contract. |
+| [PLAN-006 - Wiki Workshop Slides and Loading](PLAN-006-wiki-family.md) | `proposed` | `not-started` | Plan frontmatter is `status: proposed`; `src/app/[owner]/[repo]/page.tsx` is 2267 lines and `src/components/WikiTreeView.tsx` is still the TOC; no `src/components/generation/` folder exists. | Depends on PLAN-003; keeps wiki-family generation on raw-text `/ws/chat`. |
+| [PLAN-007 - Agent Chat Backend API](PLAN-007-agent-chat-api.md) | `implemented` | `implemented` | Plan frontmatter is `status: implemented`; `api/agent/chat_handler.py` implements the chat core; `/ws/agent-chat`, `/chat/agent-stream`, and `/agent/info` are registered in `api/api.py`; frontend connector files exist under `src/types/`, `src/utils/`, and `src/app/api/chat/agent-stream/`. | 10 sub-tasks implemented. |
+| [PLAN-008 - RAG Retrieval as an Agent Tool](PLAN-008-rag-tool.md) | `proposed` | `not-started` | Plan frontmatter is `status: proposed`; `api/retriever.py` and `api/tools/rag.py` do not exist; `_TOOL_CLASSES` in `api/tools/__init__.py` does not register `rag_search`. | 6 sub-tasks, none started. |
 
 ## Sub-tasks
 
@@ -40,24 +41,32 @@ Read this index before opening individual plans when you need current implementa
 | PLAN-001 | None recorded | N/A | The plan is organized by solution options, implementation references, benefits, and risks rather than a task checklist. |
 | PLAN-002 | None recorded | N/A | Overview plan; real tasks live in sub-plans PLAN-003 through PLAN-006. |
 | PLAN-003 | Token rewrite of `globals.css` | `not-started` | Plan step 1; blocks every other shell task. |
-| PLAN-003 | Build shared shell components under `src/components/shell/` | `not-started` | Plan step 2; includes `<AppShell>`, `<Sidebar>`, `<Topbar>`, `<Composer>`, `<Wordmark>`, `<SettingsPanel>`. |
+| PLAN-003 | Build shared shell components under `src_v2/components/shell/` | `not-started` | Plan step 2; includes `<AppShell>`, `<Sidebar>`, `<Topbar>`, `<Composer>`, `<Wordmark>`, `<SettingsPanel>`. |
+| PLAN-003 | Copy shared legacy chat and agent-chat connector files into `src_v2` | `not-started` | Preserve `createChatWebSocket`, `createAgentChatWebSocket`, `agentChatStream`, and `agentChat` types. |
 | PLAN-003 | Introduce `SettingsContext` and `useConversationHistory` | `not-started` | Plan step 3; feeds PLAN-005 and PLAN-006. |
 | PLAN-003 | Delete orphaned components (theme-toggle, ConfigurationModal, etc.) | `not-started` | Final commit of the plan. |
 | PLAN-004 | Rewrite `src/app/page.tsx` welcome route | `not-started` | Under 120 lines target. |
 | PLAN-004 | Create `src/app/projects/page.tsx` and delete `src/app/wiki/projects/` | `not-started` | New `/projects` URL per PLAN-002 D8. |
-| PLAN-005 | Rewrite `src/app/[owner]/[repo]/ask/page.tsx` | `not-started` | Under 200 lines target. |
-| PLAN-005 | Build `<ChatStream>`, `<Message>`, `<Citation>` under `src/components/chat/` | `not-started` | Reuses `<Markdown>`. |
+| PLAN-005 | Rewrite `src/app/[owner]/[repo]/ask/page.tsx` | `not-started` | Under 200 lines target; use `AgentChatRequest` with default `agent_name: "explore"`. |
+| PLAN-005 | Build `<ChatStream>`, `<Message>`, `<Citation>`, and `<ToolEvent>` under `src_v2/components/chat/` | `not-started` | Reuses `<Markdown>` and renders structured `tool_call_start` / `tool_call_end` events. |
+| PLAN-005 | Wire WebSocket + HTTP agent-chat transports | `not-started` | Primary `/ws/agent-chat`; fallback `/api/chat/agent-stream`; share one `AgentChatEvent` reducer. |
 | PLAN-006 | Rewrite `src/app/[owner]/[repo]/page.tsx` wiki route | `not-started` | Under 250 lines target. |
 | PLAN-006 | Rewrite `src/app/[owner]/[repo]/workshop/page.tsx` | `not-started` | Under 200 lines target. |
 | PLAN-006 | Rewrite `src/app/[owner]/[repo]/slides/page.tsx` | `not-started` | Under 200 lines target. |
-| PLAN-006 | Build `<GenerationLoader>` and `useGenerationPhases` hook | `not-started` | Implements the loading screen with best-effort phase parsing. |
-| PLAN-007 | Extract shared helpers to `api/agent/handler_utils.py` | `not-started` | Mechanical refactor of `api/agent/wiki_generator.py:97-234`. Blocks all subsequent steps. |
-| PLAN-007 | Implement `AgentChatRequest` + `_run_agent_chat` core | `not-started` | New module `api/agent/chat_handler.py`. |
-| PLAN-007 | Add `handle_agent_chat_websocket` + register `/ws/agent-chat` | `not-started` | Untagged events. |
-| PLAN-007 | Add `agent_chat_stream` (NDJSON) + register `/chat/agent-stream` | `not-started` | `application/x-ndjson` media type. |
-| PLAN-007 | Add `get_agent_info` + register `GET /agent/info` | `not-started` | Filtered to `_ALLOWED_CHAT_AGENTS`. |
-| PLAN-007 | Add WebSocket + HTTP test files | `not-started` | `tests/api/test_agent_chat_websocket.py`, `tests/api/test_agent_chat_stream.py`. |
-| PLAN-007 | Frontend types `src/types/agentChat.ts` | `not-started` | Discriminated union for all 5 chat-relevant events. |
-| PLAN-007 | Extend `src/utils/websocketClient.ts` with `createAgentChatWebSocket` | `not-started` | `onEvent` callback (not `onMessage`). |
-| PLAN-007 | Frontend HTTP connector `src/utils/agentChatStream.ts` | `not-started` | Line-buffered NDJSON parsing. |
-| PLAN-007 | Frontend Next.js proxy `src/app/api/chat/agent-stream/route.ts` | `not-started` | Clone of existing chat proxy with target URL change. |
+| PLAN-006 | Build `<GenerationLoader>` and `useGenerationPhases` hook | `not-started` | Implements the loading screen with best-effort phase parsing over raw `/ws/chat` text, not `AgentChatEvent`. |
+| PLAN-007 | Extract shared helpers to `api/agent/handler_utils.py` | `implemented` | `api/agent/wiki_generator.py` now imports shared repo/filter/language/send/loop helpers. |
+| PLAN-007 | Implement `AgentChatRequest` + `_run_agent_chat` core | `implemented` | `api/agent/chat_handler.py` validates agent/messages, clones the repo, wraps tools, and streams `run_agent_loop` events. |
+| PLAN-007 | Add `handle_agent_chat_websocket` + register `/ws/agent-chat` | `implemented` | Untagged events are sent through `send_event`; route registered in `api/api.py`. |
+| PLAN-007 | Add `agent_chat_stream` (NDJSON) + register `/chat/agent-stream` | `implemented` | Streaming response uses `application/x-ndjson`; route registered in `api/api.py`. |
+| PLAN-007 | Add `get_agent_info` + register `GET /agent/info` | `implemented` | Returns only `wiki`, `explore`, and `deep-research` agent metadata. |
+| PLAN-007 | Add WebSocket + HTTP test files | `implemented` | `tests/api/test_agent_chat_websocket.py` and `tests/api/test_agent_chat_stream.py` cover happy and error paths. |
+| PLAN-007 | Frontend types `src/types/agentChat.ts` | `implemented` | Discriminated union covers chat-relevant agent events and request payloads. |
+| PLAN-007 | Extend `src/utils/websocketClient.ts` with `createAgentChatWebSocket` | `implemented` | Uses structured `onEvent` callback against `/ws/agent-chat`. |
+| PLAN-007 | Frontend HTTP connector `src/utils/agentChatStream.ts` | `implemented` | Reads line-buffered NDJSON from `/api/chat/agent-stream`. |
+| PLAN-007 | Frontend Next.js proxy `src/app/api/chat/agent-stream/route.ts` | `implemented` | Proxies to backend `/chat/agent-stream` with `Accept: application/x-ndjson`. |
+| PLAN-008 | Implement `api/retriever.py` (`CodeRetriever`, LRU cache with per-key lock) | `not-started` | Pure retrieval component; reuses `DatabaseManager` for the `.pkl` disk cache. |
+| PLAN-008 | Implement `api/tools/rag.py` and `api/tools/rag.txt` | `not-started` | Thin `Tool`-ABC adapter calling `get_or_build_retriever(repo_path)`. |
+| PLAN-008 | Register `rag_search` in tool registry and agent configs | `not-started` | Add to `_TOOL_CLASSES`, `_ALL_TOOLS`, and `_READ_ONLY_TOOLS`. |
+| PLAN-008 | Post-filter `rag_search` results in `FilteredToolWrapper` | `not-started` | Drop chunks whose `meta_data.file_path` is excluded. |
+| PLAN-008 | Add unit tests for retriever and tool | `not-started` | `tests/unit/test_retriever.py`, `tests/unit/test_rag_tool.py`, `tests/api/test_agent_chat_rag_tool.py`. |
+| PLAN-008 | Update handbooks indexes to list PLAN-008 | `implemented` | This entry in `handbooks/plans/index.md`/`index.json` and `handbooks/index.md`. |

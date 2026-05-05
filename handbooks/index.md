@@ -2,7 +2,7 @@
 number: HBK-INDEX
 name: Handbooks Index
 description: Index of development plans, decisions, records, risks, backlog notes, and handbook guides under handbooks.
-update_at: 2026-05-05
+update_at: 2026-05-06
 category: index
 language: en
 audience: developers-and-agents
@@ -20,11 +20,13 @@ Read this index first when looking for plans, decisions, implementation records,
 
 - [PLAN-INDEX](plans/index.md) - Tracks implementation status for plans and their sub-tasks under handbooks/plans.
 - [PLAN-001-ast-code-splitter](plans/PLAN-001-ast-code-splitter.md) - Proposes replacing word-based splitting with an AST-aware code splitter while preserving the existing pipeline contract.
-- [PLAN-002-frontend-refinement-overview](plans/PLAN-002-frontend-refinement-overview.md) - Cross-cutting plan that ties together the four sub-plans rebranding the frontend to the OpsWiki Paper and Ink prototype.
-- [PLAN-003-foundation](plans/PLAN-003-foundation.md) - Replaces the dark-mode token set with the prototype Paper and Ink tokens, rebuilds the shared app shell, and deletes obsolete configuration modals.
+- [PLAN-002-frontend-refinement-overview](plans/PLAN-002-frontend-refinement-overview.md) - Cross-cutting plan that ties together the four sub-plans rebranding the frontend while preserving legacy chat, agent-chat, and wiki contracts.
+- [PLAN-003-foundation](plans/PLAN-003-foundation.md) - Replaces the dark-mode token set with Paper and Ink tokens, rebuilds the shared app shell, and preserves shared chat/agent-chat connectors.
 - [PLAN-004-welcome-and-projects](plans/PLAN-004-welcome-and-projects.md) - Rewrites the home route and the projects directory to match the OpsWiki welcome page and project library prototypes.
-- [PLAN-005-chat-view](plans/PLAN-005-chat-view.md) - Rewrites the Ask route into a chat-stream UI that matches the prototype, reusing the WebSocket client and Markdown renderer.
-- [PLAN-006-wiki-family](plans/PLAN-006-wiki-family.md) - Rewrites the wiki reading view, workshop view, slides presenter, and the generation loading screen to match the OpsWiki prototypes.
+- [PLAN-005-chat-view](plans/PLAN-005-chat-view.md) - Rewrites the Ask route into a chat-stream UI using the structured agent-chat connectors from PLAN-007.
+- [PLAN-006-wiki-family](plans/PLAN-006-wiki-family.md) - Rewrites the wiki reading view, workshop view, slides presenter, and loading screen while keeping legacy `/ws/chat` generation separate from agent chat.
+- [PLAN-007-agent-chat-api](plans/PLAN-007-agent-chat-api.md) - Exposes the existing agent infrastructure through WebSocket and HTTP chat APIs with frontend connector utilities.
+- [PLAN-008-rag-tool](plans/PLAN-008-rag-tool.md) - Extracts RAG retrieval into a small CodeRetriever and exposes it to the agent as a rag_search tool, reusing the existing pickle cache.
 
 ## Implementation Records
 

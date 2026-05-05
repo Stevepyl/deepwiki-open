@@ -22,7 +22,8 @@
       "Plan frontmatter declares status: proposed.",
       "src/app/layout.tsx still loads ThemeProvider.",
       "src/app/page.tsx still renders the DeepWiki welcome.",
-      "No src/components/shell/ folder exists."
+      "No src/components/shell/ folder exists.",
+      "Plan text now records the PLAN-007 agent-chat connector boundary."
     ],
     "sub_tasks": []
   },
@@ -45,9 +46,14 @@
         "notes": "Plan step 1; blocks every other shell task."
       },
       {
-        "name": "Build shared shell components under src/components/shell/",
+        "name": "Build shared shell components under src_v2/components/shell/",
         "status": "not-started",
         "notes": "Includes AppShell, Sidebar, Topbar, Composer, Wordmark, SettingsPanel."
+      },
+      {
+        "name": "Copy shared legacy chat and agent-chat connector files into src_v2",
+        "status": "not-started",
+        "notes": "Preserve createChatWebSocket, createAgentChatWebSocket, agentChatStream, and agentChat types."
       },
       {
         "name": "Introduce SettingsContext and useConversationHistory",
@@ -94,18 +100,24 @@
     "implementation_status": "not-started",
     "evidence": [
       "Plan frontmatter declares status: proposed.",
-      "src/app/[owner]/[repo]/ask/page.tsx (583 lines) still uses AskComposer and AskResultView."
+      "src/app/[owner]/[repo]/ask/page.tsx (583 lines) still uses AskComposer and AskResultView.",
+      "PLAN-007 connector files exist for the rewrite."
     ],
     "sub_tasks": [
       {
         "name": "Rewrite src/app/[owner]/[repo]/ask/page.tsx",
         "status": "not-started",
-        "notes": "Under 200 lines target."
+        "notes": "Under 200 lines target; use AgentChatRequest with default agent_name: explore."
       },
       {
-        "name": "Build ChatStream, Message, Citation under src/components/chat/",
+        "name": "Build ChatStream, Message, Citation, and ToolEvent under src_v2/components/chat/",
         "status": "not-started",
-        "notes": "Reuses Markdown component."
+        "notes": "Reuses Markdown component and renders structured tool_call_start / tool_call_end events."
+      },
+      {
+        "name": "Wire WebSocket + HTTP agent-chat transports",
+        "status": "not-started",
+        "notes": "Primary /ws/agent-chat; fallback /api/chat/agent-stream; share one AgentChatEvent reducer."
       }
     ]
   },
@@ -119,7 +131,8 @@
       "Plan frontmatter declares status: proposed.",
       "src/app/[owner]/[repo]/page.tsx is 2267 lines.",
       "src/components/WikiTreeView.tsx is still the TOC.",
-      "No src/components/generation/ folder exists."
+      "No src/components/generation/ folder exists.",
+      "Plan text keeps wiki-family generation on raw-text /ws/chat rather than agent-chat events."
     ],
     "sub_tasks": [
       {
@@ -140,7 +153,7 @@
       {
         "name": "Build GenerationLoader and useGenerationPhases hook",
         "status": "not-started",
-        "notes": "Implements the loading screen with best-effort phase parsing."
+        "notes": "Implements the loading screen with best-effort phase parsing over raw /ws/chat text, not AgentChatEvent."
       }
     ]
   },
@@ -148,64 +161,109 @@
     "name": "Agent Chat Backend API",
     "number": "PLAN-007",
     "path": "PLAN-007-agent-chat-api.md",
-    "plan_status": "proposed",
-    "implementation_status": "not-started",
+    "plan_status": "implemented",
+    "implementation_status": "implemented",
     "evidence": [
-      "Plan frontmatter declares status: proposed.",
-      "No api/agent/chat_handler.py exists.",
-      "/ws/agent-chat route is not registered in api/api.py.",
-      "No src/types/agentChat.ts or src/utils/agentChatStream.ts."
+      "Plan frontmatter declares status: implemented.",
+      "api/agent/chat_handler.py implements AgentChatRequest, _run_agent_chat, WebSocket, HTTP NDJSON, and agent info handlers.",
+      "/ws/agent-chat, /chat/agent-stream, and /agent/info are registered in api/api.py.",
+      "src/types/agentChat.ts, src/utils/agentChatStream.ts, and src/app/api/chat/agent-stream/route.ts exist."
     ],
     "sub_tasks": [
       {
         "name": "Extract shared helpers to api/agent/handler_utils.py",
-        "status": "not-started",
-        "notes": "Mechanical refactor of api/agent/wiki_generator.py:97-234. Blocks all subsequent steps."
+        "status": "implemented",
+        "notes": "api/agent/wiki_generator.py imports shared repo/filter/language/send/loop helpers."
       },
       {
         "name": "Implement AgentChatRequest + _run_agent_chat core",
-        "status": "not-started",
-        "notes": "New module api/agent/chat_handler.py."
+        "status": "implemented",
+        "notes": "api/agent/chat_handler.py validates agent/messages, clones the repo, wraps tools, and streams run_agent_loop events."
       },
       {
         "name": "Add handle_agent_chat_websocket + register /ws/agent-chat",
-        "status": "not-started",
-        "notes": "Untagged events."
+        "status": "implemented",
+        "notes": "Untagged events are sent through send_event; route registered in api/api.py."
       },
       {
         "name": "Add agent_chat_stream (NDJSON) + register /chat/agent-stream",
-        "status": "not-started",
-        "notes": "application/x-ndjson media type."
+        "status": "implemented",
+        "notes": "StreamingResponse uses application/x-ndjson; route registered in api/api.py."
       },
       {
         "name": "Add get_agent_info + register GET /agent/info",
-        "status": "not-started",
-        "notes": "Filtered to _ALLOWED_CHAT_AGENTS."
+        "status": "implemented",
+        "notes": "Returns only wiki, explore, and deep-research agent metadata."
       },
       {
         "name": "Add WebSocket + HTTP test files",
-        "status": "not-started",
-        "notes": "tests/api/test_agent_chat_websocket.py, tests/api/test_agent_chat_stream.py."
+        "status": "implemented",
+        "notes": "tests/api/test_agent_chat_websocket.py and tests/api/test_agent_chat_stream.py cover happy and error paths."
       },
       {
         "name": "Frontend types src/types/agentChat.ts",
-        "status": "not-started",
-        "notes": "Discriminated union for all 5 chat-relevant events."
+        "status": "implemented",
+        "notes": "Discriminated union covers chat-relevant agent events and request payloads."
       },
       {
         "name": "Extend src/utils/websocketClient.ts with createAgentChatWebSocket",
-        "status": "not-started",
-        "notes": "onEvent callback (not onMessage)."
+        "status": "implemented",
+        "notes": "Uses structured onEvent callback against /ws/agent-chat."
       },
       {
         "name": "Frontend HTTP connector src/utils/agentChatStream.ts",
-        "status": "not-started",
-        "notes": "Line-buffered NDJSON parsing."
+        "status": "implemented",
+        "notes": "Reads line-buffered NDJSON from /api/chat/agent-stream."
       },
       {
         "name": "Frontend Next.js proxy src/app/api/chat/agent-stream/route.ts",
+        "status": "implemented",
+        "notes": "Proxies to backend /chat/agent-stream with Accept: application/x-ndjson."
+      }
+    ]
+  },
+  {
+    "name": "RAG Retrieval as an Agent Tool",
+    "number": "PLAN-008",
+    "path": "PLAN-008-rag-tool.md",
+    "plan_status": "proposed",
+    "implementation_status": "not-started",
+    "evidence": [
+      "Plan frontmatter declares status: proposed.",
+      "api/retriever.py does not exist.",
+      "api/tools/rag.py does not exist.",
+      "_TOOL_CLASSES in api/tools/__init__.py does not register rag_search."
+    ],
+    "sub_tasks": [
+      {
+        "name": "Implement api/retriever.py (CodeRetriever, LRU cache with per-key lock)",
         "status": "not-started",
-        "notes": "Clone of existing chat proxy with target URL change."
+        "notes": "Pure retrieval component reusing DatabaseManager for the .pkl disk cache."
+      },
+      {
+        "name": "Implement api/tools/rag.py and api/tools/rag.txt",
+        "status": "not-started",
+        "notes": "Thin Tool-ABC adapter calling get_or_build_retriever(repo_path)."
+      },
+      {
+        "name": "Register rag_search in tool registry and agent configs",
+        "status": "not-started",
+        "notes": "Add to _TOOL_CLASSES, _ALL_TOOLS, and _READ_ONLY_TOOLS."
+      },
+      {
+        "name": "Post-filter rag_search results in FilteredToolWrapper",
+        "status": "not-started",
+        "notes": "Drop chunks whose meta_data.file_path is excluded by ParsedFilters."
+      },
+      {
+        "name": "Add unit tests for retriever and tool",
+        "status": "not-started",
+        "notes": "tests/unit/test_retriever.py, tests/unit/test_rag_tool.py, tests/api/test_agent_chat_rag_tool.py."
+      },
+      {
+        "name": "Update handbooks indexes to list PLAN-008",
+        "status": "implemented",
+        "notes": "Entries added to handbooks/plans/index.md, handbooks/plans/index.json, handbooks/index.md."
       }
     ]
   }

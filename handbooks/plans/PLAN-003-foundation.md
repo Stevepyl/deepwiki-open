@@ -1,7 +1,7 @@
 ---
 number: PLAN-003
 name: Foundation — Design Tokens and App Shell
-description: Replaces the dark-mode token set with the prototype Paper and Ink tokens, rebuilds the shared app shell, and deletes obsolete configuration modals.
+description: Replaces the dark-mode token set with the prototype Paper and Ink tokens, rebuilds the shared app shell, and preserves shared chat and agent-chat connectors.
 update_at: 2026-05-06
 category: improvement-plan
 language: en
@@ -21,6 +21,8 @@ Two kinds of work live here:
 2. **App shell components.** Build the small, reusable primitives that every app page renders inside: `<AppShell>`, `<Sidebar>`, `<Topbar>`, `<Composer>`, `<Wordmark>`, `<SettingsPanel>`, plus a handful of icon and chrome helpers. These live in `src_v2/components/shell/`.
 
 Scope is deliberately limited to shared infrastructure. Page-level routes and per-page components are owned by the later sub-plans.
+
+PLAN-007 added frontend connector infrastructure for structured agent chat. Foundation owns copying that shared infrastructure into `src_v2/`; PLAN-005 owns using it in the Ask route.
 
 ## Token rewrite
 
@@ -130,11 +132,13 @@ These files are copied verbatim into `src_v2/` as part of this plan. They are no
 - `src/components/Markdown.tsx` → `src_v2/components/Markdown.tsx`
 - `src/components/Mermaid.tsx` → `src_v2/components/Mermaid.tsx`
 - `src/utils/websocketClient.ts` → `src_v2/utils/websocketClient.ts`
+- `src/utils/agentChatStream.ts` → `src_v2/utils/agentChatStream.ts`
 - `src/utils/getRepoUrl.tsx` → `src_v2/utils/getRepoUrl.tsx`
 - `src/utils/urlDecoder.tsx` → `src_v2/utils/urlDecoder.tsx`
 - `src/hooks/useProcessedProjects.ts` → `src_v2/hooks/useProcessedProjects.ts`
 - `src/contexts/LanguageContext.tsx` → `src_v2/contexts/LanguageContext.tsx`
 - `src/types/**` → `src_v2/types/**`
+- `src/app/api/chat/agent-stream/route.ts` → `src_v2/app/api/chat/agent-stream/route.ts` if `src_v2/app` is being exercised as a standalone app root during the refinement branch.
 
 After copying, update all internal imports in the copied files to reference `src_v2/` paths instead of `src/` paths.
 
@@ -158,6 +162,7 @@ After copying, update all internal imports in the copied files to reference `src
 - `src_v2/contexts/SettingsContext.tsx` — new
 - `src_v2/components/Markdown.tsx`, `src_v2/components/Mermaid.tsx` — copied from `src/`
 - `src_v2/utils/*`, `src_v2/hooks/useProcessedProjects.ts`, `src_v2/contexts/LanguageContext.tsx`, `src_v2/types/**` — copied from `src/`
+- `src_v2/utils/agentChatStream.ts`, `src_v2/types/agentChat.ts`, `src_v2/app/api/chat/agent-stream/route.ts` — PLAN-007 agent-chat frontend connector surface to preserve
 - `prototype/styles.css` — canonical source for token values
 - `prototype/app-chat.html`, `prototype/app-wiki.html`, `prototype/app-workshop.html` — canonical DOM structure for shell components
 - `handbooks/adr/ADR-001-remove-wiki-type-toggle.md` — authority for dropping the toggle
@@ -173,9 +178,11 @@ In addition to the PLAN-002 shared harness:
 4. In the Console, call `getComputedStyle(document.body).getPropertyValue("--paper-main")` — it must equal `#F5F1EA`.
 5. Resize to 1100px — responsive guard at `prototype/styles.css:1350-1358` holds in the globals.
 6. `grep -r "from.*src/" src_v2/` returns no hits — all imports within `src_v2/` are self-contained.
+7. `src_v2/utils/websocketClient.ts` exports both `createChatWebSocket` and `createAgentChatWebSocket`, and `src_v2/utils/agentChatStream.ts` parses `application/x-ndjson` agent events.
 
 ## Risks
 
 - **Tailwind v4 token registration pitfalls.** Tailwind v4 syntax for `@theme` differs from v3 utility extension. A short smoke test (`<div className="text-[var(--ink-primary)]">`) in a scratch page catches wiring mistakes early.
 - **Markdown component color tokens.** `src_v2/components/Markdown.tsx` (copied from `src/`) likely references dark-mode Tailwind classes for syntax highlighting. Audit the copy during this plan and rewrite to use the paper-ink palette — specifically the `.k`, `.s`, `.c`, `.n`, `.f` classes at `prototype/styles.css:836-839, 1144-1147`.
 - **Import paths in copied files.** After copying files from `src/` to `src_v2/`, all relative imports inside those files must be updated to reflect the new directory. A missed import will produce a build error, which is detectable and fixable immediately.
+- **Agent connector drift.** `src/utils/websocketClient.ts` now contains both legacy raw-text chat and structured agent chat helpers. Keep both exports when copying; otherwise PLAN-005 cannot render tool-call progress without reintroducing backend-specific code in the page.

@@ -2,7 +2,7 @@
 number: DOC-006
 name: Frontend Backend API Reference
 description: Maps browser-visible frontend routes to FastAPI backend endpoints, payloads, streaming behavior, and caveats.
-update_at: 2026-05-04
+update_at: 2026-05-06
 category: api-reference
 language: en
 audience: developers-and-agents
@@ -23,10 +23,10 @@ Browser client
   │    /api/wiki_cache, /export/wiki, /api/lang/config, ...
   │
   ├─ Next.js route-handler proxies
-  │    /api/chat/stream, /api/models/config, /api/wiki/projects, ...
+  │    /api/chat/stream, /api/chat/agent-stream, /api/models/config, ...
   │
   └─ Direct WebSocket calls
-       ws://<backend>/ws/chat
+       ws://<backend>/ws/chat, ws://<backend>/ws/agent-chat
 ```
 
 The frontend is a Next.js application in `src/`. The backend is a FastAPI app in `api/api.py`.
@@ -67,12 +67,15 @@ Source files:
 | `/local_repo/structure` | `GET` | `/local_repo/structure` | Next rewrite | Read a local repository file tree and README. |
 | `ws://<backend>/ws/chat` | WebSocket | `/ws/chat` | Direct browser WebSocket | Stream wiki generation, Ask answers, slides, and workshop content. |
 | `/api/chat/stream` | `POST` | `/chat/completions/stream` | Next route proxy | HTTP streaming fallback for `/ws/chat`. |
+| `ws://<backend>/ws/agent-chat` | WebSocket | `/ws/agent-chat` | Direct browser WebSocket | Stream structured agent chat events for future Ask UI work. |
+| `/api/chat/agent-stream` | `POST` | `/chat/agent-stream` | Next route proxy | HTTP NDJSON fallback for structured agent chat events. |
 
 ### Backend-Registered APIs Not Currently Called by the Frontend
 
 | Backend URL | Method | Purpose |
 |---|---:|---|
 | `/ws/agent-wiki` | WebSocket | Agent-based two-phase wiki generator. Registered in FastAPI, but no current frontend caller was found. |
+| `/agent/info` | `GET` | Lists the chat-eligible agent configs (`wiki`, `explore`, `deep-research`) for a future agent picker. |
 | `/health` | `GET` | Backend health check for Docker/monitoring. |
 | `/` | `GET` | Root endpoint that lists registered routes dynamically. |
 
@@ -127,6 +130,48 @@ Notes:
 - `excluded_*` and `included_*` are strings. The backend splits them by newline, despite comments in the backend model saying "comma-separated".
 - `custom_model` is sent by some frontend generators, but the backend `ChatCompletionRequest` model does not define it. Unless the selected custom model is copied into `model`, the backend ignores `custom_model`.
 - The backend prepares or reuses repository embeddings before producing a response.
+
+### `AgentChatRequest`
+
+Used by `/ws/agent-chat` and `/api/chat/agent-stream`.
+
+```ts
+{
+  repo_url: string;
+  type?: "github" | "gitlab" | "bitbucket" | "local" | string;
+  token?: string;
+  provider?: string;
+  model?: string | null;
+  language?: string;
+  messages: ChatMessage[];
+  agent_name?: "wiki" | "explore" | "deep-research";
+  excluded_dirs?: string;
+  excluded_files?: string;
+  included_dirs?: string;
+  included_files?: string;
+}
+```
+
+Notes:
+
+- The default `agent_name` is `explore`, which uses read-only tools and the smaller step budget.
+- The backend rejects unknown agents and requires at least one usable message whose final role is `user`.
+- The request is converted to internal `AgentMessage` objects before the agent loop runs; the browser-facing shape stays the legacy chat `{ role, content }` array.
+
+### `AgentChatEvent`
+
+Used by both agent chat transports. The wire format is one JSON object per WebSocket message or NDJSON line.
+
+```ts
+type AgentChatEvent =
+  | { type: "text_delta"; content: string }
+  | { type: "tool_call_start"; tool_call_id: string; tool_name: string; tool_args: Record<string, unknown> }
+  | { type: "tool_call_end"; tool_call_id: string; tool_name: string; result_summary: string; is_error: boolean; duration_ms: number; metadata: Record<string, unknown> }
+  | { type: "finish"; finish_reason: string; usage?: Record<string, number> | null }
+  | { type: "error"; error: string; code?: string | null };
+```
+
+`api/agent/stream_events.py` also defines wiki-only and forward-compatible event variants. The current frontend agent-chat type file intentionally includes only the five chat-relevant variants.
 
 ### `RepoInfo`
 
@@ -822,7 +867,121 @@ Implementation notes:
 - The Next proxy sends `Accept: text/event-stream`, but the backend streams raw text chunks. Do not expect Server-Sent Event framing.
 - The HTTP implementation and the WebSocket implementation share the same request model and near-identical generation logic.
 
-### 5.3 `WebSocket /ws/agent-wiki`
+### 5.3 `WebSocket /ws/agent-chat`
+
+Frontend URL:
+
+```text
+ws://localhost:8001/ws/agent-chat
+```
+
+or, for HTTPS deployments:
+
+```text
+wss://<backend-host>/ws/agent-chat
+```
+
+Backend endpoint:
+
+```text
+/ws/agent-chat
+```
+
+Purpose:
+
+- Structured agent-chat transport for the redesigned Ask surface.
+- Exposes agent reasoning and tool-use events that `/ws/chat` cannot represent as raw text.
+- Used by `src/utils/websocketClient.ts#createAgentChatWebSocket`.
+
+Request:
+
+The client opens the socket, waits for `onopen`, then sends one `AgentChatRequest` JSON object:
+
+```json
+{
+  "repo_url": "https://github.com/owner/repo",
+  "type": "github",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Where is authentication implemented?"
+    }
+  ],
+  "agent_name": "explore",
+  "provider": "google",
+  "model": "gemini-2.5-flash",
+  "language": "en",
+  "token": "optional-private-repo-token",
+  "excluded_dirs": "node_modules\n.next",
+  "excluded_files": "*.lock",
+  "included_dirs": "src\napi",
+  "included_files": "*.ts\n*.py"
+}
+```
+
+Response:
+
+- Server sends structured JSON events with a discriminating `type` field.
+- `text_delta` events append to the assistant message.
+- `tool_call_start` and `tool_call_end` events update tool/reasoning UI state.
+- `error` may be followed by a terminal `finish` with `finish_reason: "error"`.
+- A normal session ends with exactly one `finish` event.
+
+Validation and errors:
+
+| Condition | Event sequence |
+|---|---|
+| Unknown `agent_name` | `error` with `code: "unknown_agent"`, then `finish`. |
+| Empty `messages` | `error` with `code: "empty_messages"`, then `finish`. |
+| Final message is not `role: "user"` | `error` with `code: "last_message_not_user"`, then `finish`. |
+| Repository clone/download fails | `error` with `code: "clone_failed"`, then `finish`. |
+| Provider init fails | `error` with `code: "provider_error"`, then `finish`. |
+
+Implementation notes:
+
+- This WebSocket is direct browser-to-backend. It is not proxied by `next.config.ts`.
+- It uses the same `SERVER_BASE_URL.replace(/^http/, "ws")` convention as the legacy chat helper.
+- PLAN-007 added only connector utilities. The current `src/app/[owner]/[repo]/ask/page.tsx` still uses `/ws/chat`; PLAN-005 owns wiring the redesigned Ask page to this structured stream.
+
+### 5.4 `POST /api/chat/agent-stream`
+
+Frontend URL:
+
+```http
+POST /api/chat/agent-stream
+Content-Type: application/json
+Accept: application/x-ndjson
+```
+
+Backend target:
+
+```http
+POST /chat/agent-stream
+```
+
+Purpose:
+
+- HTTP fallback for `/ws/agent-chat`.
+- Preserves the same structured agent event shape over line-delimited JSON.
+- Used by `src/utils/agentChatStream.ts#streamAgentChatHttp`.
+
+Request:
+
+Same shape as `AgentChatRequest` for `/ws/agent-chat`.
+
+Response:
+
+- Next route handler returns a `ReadableStream`.
+- Backend returns `StreamingResponse(..., media_type="application/x-ndjson")`.
+- Each non-empty line is one serialized `AgentChatEvent`.
+- The Next proxy sets `Cache-Control: no-cache, no-transform` and forwards the backend `Content-Type` when present.
+
+Implementation notes:
+
+- This is not SSE. Clients should split on `\n` and parse each line as JSON.
+- The WebSocket and HTTP agent transports emit the same event objects, so the redesigned Ask page can share one `onEvent` reducer.
+
+### 5.5 `WebSocket /ws/agent-wiki`
 
 Backend endpoint:
 
@@ -922,7 +1081,7 @@ If WebSocket setup or streaming fails, the page falls back to `POST /api/chat/st
 ### 6.3 Ask Page Flow
 
 ```text
-Ask page
+Current Ask page
   ├─ GET /api/models/config if URL state lacks provider/model
   ├─ WebSocket /ws/chat
   │    └─ stream answer chunks
@@ -931,6 +1090,18 @@ Ask page
 ```
 
 The Ask page sends previous turns as `messages`, so the backend can reconstruct conversation memory before answering.
+
+PLAN-007 also added a structured agent-chat connector path for the upcoming PLAN-005 Ask rewrite:
+
+```text
+Redesigned Ask page
+  ├─ WebSocket /ws/agent-chat
+  │    └─ stream AgentChatEvent JSON objects
+  └─ POST /api/chat/agent-stream
+       └─ HTTP NDJSON fallback using the same events
+```
+
+For that path, `text_delta` fills the assistant message and `tool_call_start` / `tool_call_end` drive the reasoning or tool timeline. The route-level UI is not wired yet in current `src/`.
 
 ### 6.4 Slides and Workshop Flows
 
@@ -974,7 +1145,7 @@ Most proxies use `SERVER_BASE_URL`, but `/api/wiki/projects` uses `PYTHON_BACKEN
 
 ### 7.3 Direct WebSocket Is Not Covered by Next Rewrites
 
-REST routes can be same-origin through Next. `/ws/chat` is direct to the backend host. Production deployments must expose the FastAPI WebSocket endpoint to the browser or add a separate WebSocket proxy.
+REST routes can be same-origin through Next. `/ws/chat` and `/ws/agent-chat` are direct to the backend host. Production deployments must expose the FastAPI WebSocket endpoints to the browser or add a separate WebSocket proxy.
 
 ### 7.4 Cache Key Does Not Include Generation Mode
 
@@ -1004,6 +1175,8 @@ The proxy advertises `Accept: text/event-stream`, but the backend yields raw tex
 
 `/ws/chat` sends normal model output and errors as plain text. The client cannot distinguish structured errors from ordinary output except by string conventions such as `Error:`.
 
+`/ws/agent-chat` is different: errors are structured `AgentChatEvent` objects with `type: "error"`, followed by a terminal `finish` event. Do not reuse raw-text error parsing for the agent path.
+
 ### 7.9 Backend CORS Is Permissive
 
 FastAPI allows all origins, methods, and headers. This helps local development and direct WebSocket/REST access, but production deployments should consider narrowing CORS.
@@ -1016,9 +1189,12 @@ FastAPI allows all origins, methods, and headers. This helps local development a
 | Auth status proxy | `src/app/api/auth/status/route.ts` |
 | Auth validate proxy | `src/app/api/auth/validate/route.ts` |
 | Chat HTTP fallback proxy | `src/app/api/chat/stream/route.ts` |
+| Agent chat HTTP fallback proxy | `src/app/api/chat/agent-stream/route.ts` |
 | Model config proxy | `src/app/api/models/config/route.ts` |
 | Processed projects proxy | `src/app/api/wiki/projects/route.ts` |
 | Shared WebSocket helper | `src/utils/websocketClient.ts` |
+| Agent chat HTTP helper | `src/utils/agentChatStream.ts` |
+| Agent chat frontend types | `src/types/agentChat.ts` |
 | Main wiki page callers | `src/app/[owner]/[repo]/page.tsx` |
 | Ask page callers | `src/app/[owner]/[repo]/ask/page.tsx` |
 | Slides page callers | `src/app/[owner]/[repo]/slides/page.tsx` |
@@ -1026,5 +1202,6 @@ FastAPI allows all origins, methods, and headers. This helps local development a
 | FastAPI app and REST routes | `api/api.py` |
 | HTTP chat streaming backend | `api/simple_chat.py` |
 | WebSocket chat backend | `api/websocket_wiki.py` |
+| Agent chat backend | `api/agent/chat_handler.py` |
 | Agent wiki WebSocket backend | `api/agent/wiki_generator.py` |
 | Agent event models | `api/agent/stream_events.py` |

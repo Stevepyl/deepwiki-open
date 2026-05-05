@@ -2,7 +2,7 @@
 number: DOC-INDEX
 name: Docs Index
 description: Index of developer and agent documentation under docs.
-update_at: 2026-05-04
+update_at: 2026-05-06
 category: index
 language: en
 audience: developers-and-agents
@@ -22,8 +22,8 @@ Read this index first when looking for project documentation.
 
 ## API
 
-- [frontend-backend-apis](api/frontend-backend-apis.md) - Maps browser-visible frontend routes to FastAPI backend endpoints, payloads, streaming behavior, and caveats.
-- [frontend-backend-apis-cn](api/frontend-backend-apis-cn.md) - Chinese translation of the frontend-backend API boundary reference.
+- [frontend-backend-apis](api/frontend-backend-apis.md) - Maps browser-visible frontend routes to FastAPI backend endpoints, including legacy chat, agent chat, streaming payloads, and caveats.
+- [frontend-backend-apis-cn](api/frontend-backend-apis-cn.md) - Chinese translation of the frontend-backend API boundary reference, including the agent chat connector contract.
 
 ## Analysis
 
