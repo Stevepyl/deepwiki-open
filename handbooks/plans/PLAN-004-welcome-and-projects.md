@@ -5,7 +5,7 @@ description: Rewrites the home route and the projects directory to match the Ops
 update_at: 2026-05-06
 category: improvement-plan
 language: en
-status: proposed
+status: implemented
 ---
 
 # PLAN-004 Welcome and Projects Directory
@@ -109,6 +109,8 @@ Target length: under 180 lines.
 - `src/app/projects/page.tsx` — new
 - `src/components/welcome/*` — new folder
 - `src/components/projects/*` — new folder
+- `src/hooks/useProjectsDirectory.ts` — project grouping, filtering, view persistence, alpha-rail active state, and delete flow
+- `src/app/api/wiki/projects/route.ts` — Next route proxy for listing and deleting processed projects from the active `src` app
 - `src/hooks/useProcessedProjects.ts` — copied from `src_old/` in PLAN-003
 - `src/hooks/useConversationHistory.ts` — introduced in PLAN-003
 - `src/utils/urlDecoder.tsx` — copied from `src_old/` in PLAN-003

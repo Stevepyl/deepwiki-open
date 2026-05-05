@@ -19,8 +19,8 @@
     "plan_status": "proposed",
     "implementation_status": "in-progress",
     "evidence": [
-      "PLAN-003 is implemented in src.",
-      "PLAN-004 through PLAN-006 remain not-started.",
+      "PLAN-003 and PLAN-004 are implemented in src.",
+      "PLAN-005 and PLAN-006 remain not-started.",
       "The legacy src_old/ frontend remains untouched per the overview non-goal."
     ],
     "sub_tasks": []
@@ -72,25 +72,27 @@
     "name": "Welcome and Projects Directory",
     "number": "PLAN-004",
     "path": "PLAN-004-welcome-and-projects.md",
-    "plan_status": "proposed",
-    "implementation_status": "not-started",
+    "plan_status": "implemented",
+    "implementation_status": "implemented",
     "evidence": [
-      "Plan frontmatter declares status: proposed.",
-      "src_old/app/page.tsx is 627 lines rendering the current home.",
-      "src_old/app/wiki/projects/page.tsx is the active projects route.",
-      "src_old/app/projects/ does not exist.",
-      "Plan now carries a Tailwind-first styling rule aligned with PLAN-005 and PLAN-006."
+      "Plan frontmatter declares status: implemented.",
+      "src/app/page.tsx is 111 lines and renders the OpsWiki welcome route.",
+      "src/app/projects/page.tsx is 117 lines and renders the project directory route.",
+      "src/components/welcome/* and src/components/projects/* provide the PLAN-004 UI pieces.",
+      "src/hooks/useProjectsDirectory.ts owns grouping, filtering, view persistence, alpha-rail state, and delete flow.",
+      "src/app/api/wiki/projects/route.ts proxies GET and DELETE for the active src app.",
+      "bun run lint and bun run build pass."
     ],
     "sub_tasks": [
       {
-        "name": "Rewrite src_old/app/page.tsx welcome route",
-        "status": "not-started",
-        "notes": "Under 120 lines target."
+        "name": "Rewrite src/app/page.tsx welcome route",
+        "status": "implemented",
+        "notes": "111 lines; renders the wordmark, subtitle, scratch input, example grid, /projects link, and welcome keyboard hint."
       },
       {
-        "name": "Create src_old/app/projects/page.tsx and delete src_old/app/wiki/projects/",
-        "status": "not-started",
-        "notes": "New /projects URL per PLAN-002 D8."
+        "name": "Create src/app/projects/page.tsx and project directory components",
+        "status": "implemented",
+        "notes": "117-line route with alpha rail, filter input, grid/list persistence, grouped cards, conversation counts, and delete flow through /api/wiki/projects."
       }
     ]
   },

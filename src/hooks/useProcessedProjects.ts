@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-interface ProcessedProject {
+export interface ProcessedProject {
   id: string;
   owner: string;
   repo: string;
