@@ -12,6 +12,7 @@ interface ComposerProps {
   onChange: (value: string) => void;
   onSubmit: () => void;
   onOpenSettings: () => void;
+  disabled?: boolean;
   footer?: ReactNode;
 }
 
@@ -26,11 +27,12 @@ export function Composer({
   onChange,
   onSubmit,
   onOpenSettings,
+  disabled = false,
   footer,
 }: ComposerProps) {
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (value.trim()) {
+    if (value.trim() && !disabled) {
       onSubmit();
     }
   };
@@ -63,6 +65,7 @@ export function Composer({
           value={value}
           onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
+          disabled={disabled}
         />
         <div className="relative z-[1] flex shrink-0 items-center gap-1">
           <button
@@ -83,7 +86,7 @@ export function Composer({
           </button>
           <button
             className="ml-0.5 flex h-[38px] w-[38px] items-center justify-center rounded-full text-[var(--accent)] transition-all duration-150 enabled:hover:bg-[var(--accent-soft)] [&>svg]:h-4 [&>svg]:w-4"
-            disabled={!value.trim()}
+            disabled={!value.trim() || disabled}
             type="submit"
             aria-label={shellMessages.composer.send}
           >
@@ -92,7 +95,7 @@ export function Composer({
         </div>
       </form>
       {footer && (
-        <div className="pointer-events-none fixed bottom-2 left-[calc(var(--sidebar-w)_+_((100vw_-_var(--sidebar-w))_/_2))] z-[49] flex w-[calc(100%_-_var(--sidebar-w)_-_80px)] max-w-[var(--composer-max-w)] -translate-x-1/2 justify-between gap-5 px-2 font-[var(--font-sans)] text-[10.5px] text-[var(--ink-faint)] [&_kbd]:rounded-[3px] [&_kbd]:border [&_kbd]:border-[var(--hairline)] [&_kbd]:bg-[var(--paper-panel)] [&_kbd]:px-[5px] [&_kbd]:py-px [&_kbd]:font-[var(--font-mono)] [&_kbd]:text-[10px] [&_kbd]:text-[var(--ink-muted)]">
+        <div className="fixed bottom-2 left-[calc(var(--sidebar-w)_+_((100vw_-_var(--sidebar-w))_/_2))] z-[49] flex w-[calc(100%_-_var(--sidebar-w)_-_80px)] max-w-[var(--composer-max-w)] -translate-x-1/2 justify-between gap-5 px-2 font-[var(--font-sans)] text-[10.5px] text-[var(--ink-faint)] [&_kbd]:rounded-[3px] [&_kbd]:border [&_kbd]:border-[var(--hairline)] [&_kbd]:bg-[var(--paper-panel)] [&_kbd]:px-[5px] [&_kbd]:py-px [&_kbd]:font-[var(--font-mono)] [&_kbd]:text-[10px] [&_kbd]:text-[var(--ink-muted)]">
           {footer}
         </div>
       )}

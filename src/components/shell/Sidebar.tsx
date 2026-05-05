@@ -94,7 +94,7 @@ export function Sidebar() {
                     >
                       <Link
                         className="flex flex-col gap-0.5 pr-5"
-                        href={`/${repo.owner}/${repo.repo}/ask?conversation=${conv.id}`}
+                        href={`/${repo.owner}/${repo.repo}/ask?convId=${conv.id}`}
                       >
                         <span className="truncate font-[var(--font-serif)] text-[13.5px] font-normal leading-[1.35] text-[var(--ink-primary)]">
                           {conv.title}

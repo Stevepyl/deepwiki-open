@@ -1,13 +1,28 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 const STORAGE_KEY = "opswiki.conversationHistory";
+const HISTORY_EVENT = "opswiki:conversation-history";
+const MAX_STORAGE_BYTES = 4 * 1024 * 1024;
+
+export interface ConvMessage {
+  role: "user" | "assistant";
+  content: string;
+  timestamp: number;
+  citations?: string[];
+}
 
 export interface ConvEntry {
   id: string;
+  repoKey: string;
   title: string;
+  messages: ConvMessage[];
   lastMessageAt: number;
+  model?: string;
+}
+
+export interface ConvSummary extends ConvEntry {
   messageCount: number;
 }
 
@@ -15,7 +30,7 @@ export interface RepoEntry {
   type: string;
   owner: string;
   repo: string;
-  convs: ConvEntry[];
+  convs: ConvSummary[];
 }
 
 function repoKeyOf(entry: Pick<RepoEntry, "type" | "owner" | "repo">) {
@@ -28,7 +43,25 @@ function parseRepoKey(repoKey: string): RepoEntry {
   return { type, owner, repo, convs: [] };
 }
 
-function readHistory(): RepoEntry[] {
+function legacyEntries(value: unknown): ConvEntry[] {
+  if (!Array.isArray(value) || !value.some((item) => item && typeof item === "object" && "convs" in item)) {
+    return [];
+  }
+  return value.flatMap((repo) => {
+    const typedRepo = repo as RepoEntry;
+    const repoKey = repoKeyOf(typedRepo);
+    return (typedRepo.convs ?? []).map((conv) => ({
+      id: conv.id,
+      repoKey,
+      title: conv.title,
+      messages: conv.messages ?? [],
+      lastMessageAt: conv.lastMessageAt,
+      model: conv.model,
+    }));
+  });
+}
+
+function readHistory(): ConvEntry[] {
   if (typeof window === "undefined") {
     return [];
   }
@@ -37,59 +70,127 @@ function readHistory(): RepoEntry[] {
     .forEach((key) => window.localStorage.removeItem(key));
 
   const raw = window.localStorage.getItem(STORAGE_KEY);
-  return raw ? (JSON.parse(raw) as RepoEntry[]) : [];
+  if (!raw) {
+    return [];
+  }
+  const parsed = JSON.parse(raw) as unknown;
+  const migrated = legacyEntries(parsed);
+  if (migrated.length > 0) {
+    return migrated;
+  }
+  return Array.isArray(parsed) ? (parsed as ConvEntry[]) : [];
+}
+
+function trimForQuota(conversations: ConvEntry[]) {
+  let next = [...conversations].sort((left, right) => right.lastMessageAt - left.lastMessageAt);
+  while (JSON.stringify(next).length > MAX_STORAGE_BYTES && next.length > 1) {
+    next = next.slice(0, -1);
+  }
+  return next;
+}
+
+function writeHistory(conversations: ConvEntry[]) {
+  const next = trimForQuota(conversations);
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  window.dispatchEvent(new Event(HISTORY_EVENT));
+  return next;
+}
+
+function summarize(conversations: ConvEntry[]): RepoEntry[] {
+  const repos = new Map<string, RepoEntry>();
+  conversations.forEach((conv) => {
+    const existing = repos.get(conv.repoKey) ?? parseRepoKey(conv.repoKey);
+    repos.set(conv.repoKey, {
+      ...existing,
+      convs: [
+        ...existing.convs,
+        {
+          ...conv,
+          messageCount: conv.messages.length,
+        },
+      ].sort((left, right) => right.lastMessageAt - left.lastMessageAt),
+    });
+  });
+  return Array.from(repos.values()).sort((left, right) => {
+    const leftTime = left.convs[0]?.lastMessageAt ?? 0;
+    const rightTime = right.convs[0]?.lastMessageAt ?? 0;
+    return rightTime - leftTime;
+  });
 }
 
 export function useConversationHistory() {
-  const [repos, setRepos] = useState<RepoEntry[]>([]);
+  const [conversations, setConversations] = useState<ConvEntry[]>([]);
   const [hydrated, setHydrated] = useState(false);
 
-  useEffect(() => {
-    setRepos(readHistory());
+  const refresh = useCallback(() => {
+    setConversations(readHistory());
     setHydrated(true);
   }, []);
 
   useEffect(() => {
-    if (hydrated) {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(repos));
-    }
-  }, [hydrated, repos]);
+    refresh();
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === STORAGE_KEY) {
+        refresh();
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    window.addEventListener(HISTORY_EVENT, refresh);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener(HISTORY_EVENT, refresh);
+    };
+  }, [refresh]);
 
-  const upsertRepo = useCallback((entry: RepoEntry) => {
-    setRepos((current) => {
-      const key = repoKeyOf(entry);
-      const exists = current.some((repo) => repoKeyOf(repo) === key);
-      return exists
-        ? current.map((repo) => (repoKeyOf(repo) === key ? { ...repo, ...entry } : repo))
-        : [...current, entry];
-    });
+  const persist = useCallback((updater: (current: ConvEntry[]) => ConvEntry[]) => {
+    setConversations((current) => writeHistory(updater(current)));
   }, []);
 
-  const removeRepo = useCallback((repoKey: string) => {
-    setRepos((current) => current.filter((repo) => repoKeyOf(repo) !== repoKey));
-  }, []);
+  const addConversation = useCallback(
+    (repoKey: string, conv: Omit<ConvEntry, "repoKey">) => {
+      persist((current) => [{ ...conv, repoKey }, ...current.filter((item) => item.id !== conv.id)]);
+    },
+    [persist],
+  );
 
-  const addConversation = useCallback((repoKey: string, conv: ConvEntry) => {
-    setRepos((current) => {
-      const repoEntry = current.find((repo) => repoKeyOf(repo) === repoKey) ?? parseRepoKey(repoKey);
-      const nextRepo = {
-        ...repoEntry,
-        convs: [conv, ...repoEntry.convs.filter((item) => item.id !== conv.id)],
-      };
-      return current.some((repo) => repoKeyOf(repo) === repoKey)
-        ? current.map((repo) => (repoKeyOf(repo) === repoKey ? nextRepo : repo))
-        : [nextRepo, ...current];
-    });
-  }, []);
+  const removeConversation = useCallback(
+    (convId: string) => {
+      persist((current) => current.filter((conv) => conv.id !== convId));
+    },
+    [persist],
+  );
 
-  const removeConversation = useCallback((convId: string) => {
-    setRepos((current) =>
-      current.map((repo) => ({
-        ...repo,
-        convs: repo.convs.filter((conv) => conv.id !== convId),
-      })),
-    );
-  }, []);
+  const removeRepo = useCallback(
+    (repoKey: string) => {
+      persist((current) => current.filter((conv) => conv.repoKey !== repoKey));
+    },
+    [persist],
+  );
 
-  return { repos, addConversation, removeConversation, upsertRepo, removeRepo };
+  const upsertRepo = useCallback(
+    (entry: RepoEntry) => {
+      const repoKey = repoKeyOf(entry);
+      persist((current) => [
+        ...entry.convs.map((conv) => ({
+          id: conv.id,
+          repoKey,
+          title: conv.title,
+          messages: conv.messages,
+          lastMessageAt: conv.lastMessageAt,
+          model: conv.model,
+        })),
+        ...current.filter((conv) => conv.repoKey !== repoKey),
+      ]);
+    },
+    [persist],
+  );
+
+  const getConversation = useCallback(
+    (convId: string) => conversations.find((conv) => conv.id === convId),
+    [conversations],
+  );
+
+  const repos = useMemo(() => summarize(conversations), [conversations]);
+
+  return { conversations, hydrated, repos, addConversation, getConversation, removeConversation, upsertRepo, removeRepo };
 }

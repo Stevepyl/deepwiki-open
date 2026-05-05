@@ -5,7 +5,7 @@ description: Rewrites the Ask route into a chat-stream UI that matches the proto
 update_at: 2026-05-06
 category: improvement-plan
 language: en
-status: proposed
+status: implemented
 ---
 
 # PLAN-005 Chat View
@@ -38,6 +38,26 @@ Never introduce new dark-mode selectors or `data-theme` branches. Tokens drive t
 ## Target file
 
 `src/app/[owner]/[repo]/ask/page.tsx` — new file, target under 200 lines.
+
+## Implementation Notes
+
+Implemented in `src/` on 2026-05-06:
+
+- `src/app/[owner]/[repo]/ask/page.tsx` is 197 lines and owns chat state, `?q` auto-submit, `?convId` reload, full-history `AgentChatRequest` construction, WebSocket streaming, HTTP fallback, and conversation persistence.
+- `src/components/chat/ChatStream.tsx`, `Message.tsx`, `Citation.tsx`, and `ToolEvent.tsx` render the Tailwind-first chat stream, Markdown messages, citation pills, and structured tool timeline.
+- `src/components/chat/ChatTopbar.tsx`, `ChatComposer.tsx`, `runtime.ts`, and `types.ts` keep chrome and pure helpers out of the route while preserving page-local state.
+- `src/hooks/useConversationHistory.ts` now persists full conversation entries, derives sidebar/project summaries, evicts oldest entries over the 4 MB quota guard, and refreshes same-tab sidebar state through a local history event.
+- `src/utils/getRepoUrl.tsx` now resolves owner/repo paths to the real GitHub/GitLab/Bitbucket URL instead of the previous `http://example/...` placeholder.
+- `src/app/api/models/config/route.ts` proxies the model config endpoint used by the shared settings panel.
+
+Verification status:
+
+- `bun run lint` — pass.
+- `bun run build` — pass.
+- `git diff --check` — pass.
+- `rg -n "from .*src_old/|from ['\"]src_old/|src_old/" src` — no hits.
+- `curl -I http://127.0.0.1:3000/vercel/next.js/ask` — pass, returned `200 OK` from the dev server.
+- Browser automation was not run because Python Playwright is not installed locally; Computer Use also failed with an authentication error.
 
 ## Route parameters
 
