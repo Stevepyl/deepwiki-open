@@ -37,7 +37,7 @@
   {
     "name": "Wiki Workshop Slides and Loading",
     "number": "PLAN-006",
-    "description": "Rewrites the wiki reading view, workshop view, slides presenter, and loading screen while keeping legacy /ws/chat generation separate from agent chat."
+    "description": "Implemented the wiki reading view, workshop view, slides presenter, and loading screen while keeping legacy /ws/chat generation separate from agent chat."
   },
   {
     "name": "Agent Chat Backend API",

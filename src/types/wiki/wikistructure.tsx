@@ -1,5 +1,12 @@
 import { WikiPage } from "./wikipage";
 
+export interface WikiSection {
+    id: string;
+    title: string;
+    pages: string[];
+    subsections?: string[];
+}
+
 /**
  * @fileoverview This file defines the structure of a wiki page and its sections.
  */
@@ -8,4 +15,6 @@ export interface WikiStructure {
     title: string;
     description: string;
     pages: WikiPage[];
+    sections?: WikiSection[];
+    rootSections?: string[];
 }

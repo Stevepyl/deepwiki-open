@@ -107,3 +107,62 @@
     color: var(--accent);
   }
 }
+
+@layer components {
+  /* PLAN-006 scoped fallbacks: log reveal and fixed-format slide body sizing. */
+  .log-line {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    line-height: 1.5;
+    letter-spacing: 0;
+    color: var(--ink-secondary);
+    opacity: 0;
+    animation: log-line-reveal 0.28s ease-out forwards;
+  }
+
+  .log-line--done {
+    color: var(--ink-primary);
+  }
+
+  .log-line--dim {
+    color: var(--ink-muted);
+  }
+
+  .log-line--error {
+    color: var(--accent);
+  }
+
+  .hairline-progress {
+    transition: width 240ms ease-out;
+  }
+
+  .slide-body h1,
+  .slide-body h2,
+  .slide-body h3 {
+    margin-top: 0;
+  }
+
+  .slide-body p,
+  .slide-body li {
+    font-size: 14px;
+    line-height: 1.55;
+  }
+
+  .slide-body pre {
+    max-height: 180px;
+  }
+
+  @keyframes log-line-reveal {
+    from {
+      opacity: 0;
+      transform: translateY(3px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}

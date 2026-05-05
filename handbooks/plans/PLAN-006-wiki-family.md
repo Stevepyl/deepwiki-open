@@ -5,7 +5,7 @@ description: Rewrites the wiki reading view, workshop view, slides presenter, an
 update_at: 2026-05-06
 category: improvement-plan
 language: en
-status: proposed
+status: implemented
 ---
 
 # PLAN-006 Wiki, Workshop, Slides, and Loading
@@ -24,6 +24,19 @@ The prototype introduces four distinct surfaces for these: `app-wiki.html`, `app
 All new code is written to `src/`. The existing `src_old/` files are left untouched. This plan groups the wiki family because they share data sources (`GET /api/wiki_cache`, `WebSocket /ws/chat`) and the cached `WikiStructure` from `src/types/wiki/` (copied from `src_old/` in PLAN-003).
 
 PLAN-007 added structured agent chat connectors for PLAN-005. This wiki-family plan does not switch wiki/workshop/slides generation to agent chat. Keep using the legacy raw-text `/ws/chat` generation path unless a later plan explicitly migrates these routes to `/ws/agent-wiki`.
+
+## Implementation Result
+
+Implemented on 2026-05-06 in `src/` with `src_old/` left untouched.
+
+- `src/app/[owner]/[repo]/page.tsx` is 142 lines and renders the cached wiki route or `GenerationLoader` for `?status=generating`.
+- `src/app/[owner]/[repo]/workshop/page.tsx` is 121 lines and renders the workshop rail/article from cached wiki content, with background `/ws/chat` workshop generation cached under `opswiki.workshop.${repoKey}.${language}`.
+- `src/app/[owner]/[repo]/slides/page.tsx` is 103 lines and renders the chrome-minimal slides presenter with arrow-key and fullscreen controls.
+- `src/components/wiki/*`, `src/components/workshop/*`, `src/components/slides/*`, and `src/components/generation/*` implement the prototype surfaces with Tailwind-first Paper and Ink token usage.
+- `src/utils/wiki.ts`, `src/utils/wikiGeneration.ts`, `src/utils/workshop.ts`, and `src/utils/slides.ts` hold the repeated cache, export, generation, localStorage, and slide/workshop derivation logic so the route files stay small.
+- `src/app/api/chat/stream/route.ts` restores the same-origin raw-text HTTP fallback for the legacy `/ws/chat` path; wiki-family generation still uses `createChatWebSocket`, not `createAgentChatWebSocket`.
+- `src/types/wiki/wikistructure.tsx` now includes optional `sections` and `rootSections`; `src/utils/websocketClient.ts` now types included dir/file filters on `ChatCompletionRequest`.
+- Verification: `bun run lint` passed; `bun run build` passed; route compilation listed `/[owner]/[repo]`, `/[owner]/[repo]/workshop`, `/[owner]/[repo]/slides`, and `/api/chat/stream`.
 
 ## Styling rule — Tailwind-first
 
@@ -156,7 +169,7 @@ Renders:
 - `src/components/generation/GenerationLoader.tsx`.
 - `src/components/generation/PhasePipeline.tsx` (~40 lines).
 - `src/components/generation/LogPanel.tsx` (~60 lines).
-- `src/hooks/useGenerationPhases.ts` (~80 lines).
+- `src/hooks/useGenerationPhases.ts` (~100 lines, including optional `ReadableStream<string>` support).
 
 ## Components to delete after this plan
 

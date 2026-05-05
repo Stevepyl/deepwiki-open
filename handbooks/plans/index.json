@@ -16,12 +16,12 @@
     "name": "OpsWiki Frontend Refinement Overview",
     "number": "PLAN-002",
     "path": "PLAN-002-frontend-refinement-overview.md",
-    "plan_status": "proposed",
-    "implementation_status": "in-progress",
+    "plan_status": "implemented",
+    "implementation_status": "implemented",
     "evidence": [
-      "PLAN-003, PLAN-004, and PLAN-005 are implemented in src.",
-      "PLAN-006 remains not-started.",
-      "The legacy src_old/ frontend remains untouched per the overview non-goal."
+      "PLAN-003, PLAN-004, PLAN-005, and PLAN-006 are implemented in src.",
+      "The legacy src_old/ frontend remains untouched per the overview non-goal.",
+      "bun run lint and bun run build pass."
     ],
     "sub_tasks": []
   },
@@ -132,36 +132,37 @@
     "name": "Wiki Workshop Slides and Loading",
     "number": "PLAN-006",
     "path": "PLAN-006-wiki-family.md",
-    "plan_status": "proposed",
-    "implementation_status": "not-started",
+    "plan_status": "implemented",
+    "implementation_status": "implemented",
     "evidence": [
-      "Plan frontmatter declares status: proposed.",
-      "src_old/app/[owner]/[repo]/page.tsx is 2267 lines.",
-      "src_old/components/WikiTreeView.tsx is still the TOC.",
-      "No src_old/components/generation/ folder exists.",
-      "Plan text keeps wiki-family generation on raw-text /ws/chat rather than agent-chat events.",
-      "Plan now carries a Tailwind-first styling rule aligned with PLAN-004 and PLAN-005."
+      "Plan frontmatter declares status: implemented.",
+      "src/app/[owner]/[repo]/page.tsx is 142 lines.",
+      "src/app/[owner]/[repo]/workshop/page.tsx is 121 lines.",
+      "src/app/[owner]/[repo]/slides/page.tsx is 103 lines.",
+      "src/components/wiki/*, src/components/workshop/*, src/components/slides/*, src/components/generation/*, and src/hooks/useGenerationPhases.ts are implemented in src.",
+      "src/utils/wikiGeneration.ts uses raw-text /ws/chat through createChatWebSocket rather than AgentChatEvent.",
+      "bun run lint and bun run build pass."
     ],
     "sub_tasks": [
       {
-        "name": "Rewrite src_old/app/[owner]/[repo]/page.tsx wiki route",
-        "status": "not-started",
-        "notes": "Under 250 lines target."
+        "name": "Rewrite src/app/[owner]/[repo]/page.tsx wiki route",
+        "status": "implemented",
+        "notes": "142-line route renders cached wiki content, handles ?status=generating, redirects composer submissions to Ask, exposes slides and export actions, and does not import from src_old/."
       },
       {
-        "name": "Rewrite src_old/app/[owner]/[repo]/workshop/page.tsx",
-        "status": "not-started",
-        "notes": "Under 200 lines target."
+        "name": "Rewrite src/app/[owner]/[repo]/workshop/page.tsx",
+        "status": "implemented",
+        "notes": "121-line route renders the workshop progress rail and article, seeds localStorage from cached wiki content, and background-generates workshop steps through raw /ws/chat."
       },
       {
-        "name": "Rewrite src_old/app/[owner]/[repo]/slides/page.tsx",
-        "status": "not-started",
-        "notes": "Under 200 lines target."
+        "name": "Rewrite src/app/[owner]/[repo]/slides/page.tsx",
+        "status": "implemented",
+        "notes": "103-line route renders the slides presenter with previous/next stubs, dots, counter, fullscreen, and keyboard controls."
       },
       {
         "name": "Build GenerationLoader and useGenerationPhases hook",
-        "status": "not-started",
-        "notes": "Implements the loading screen with best-effort phase parsing over raw /ws/chat text, not AgentChatEvent."
+        "status": "implemented",
+        "notes": "GenerationLoader is 114 lines; useGenerationPhases.ts is 99 lines and performs best-effort phase parsing over raw text, not AgentChatEvent."
       }
     ]
   },

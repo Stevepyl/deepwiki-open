@@ -5,7 +5,7 @@ description: Cross-cutting plan that ties together the four sub-plans rebranding
 update_at: 2026-05-06
 category: improvement-plan
 language: en
-status: proposed
+status: implemented
 ---
 
 # OpsWiki Frontend Refinement — Overview

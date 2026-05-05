@@ -24,7 +24,7 @@ Read this index first when looking for plans, decisions, implementation records,
 - [PLAN-003-foundation](plans/PLAN-003-foundation.md) - Replaces the dark-mode token set with Paper and Ink tokens, rebuilds the shared app shell, and preserves shared chat/agent-chat connectors.
 - [PLAN-004-welcome-and-projects](plans/PLAN-004-welcome-and-projects.md) - Rewrites the home route and the projects directory to match the OpsWiki welcome page and project library prototypes.
 - [PLAN-005-chat-view](plans/PLAN-005-chat-view.md) - Rewrites the Ask route into a chat-stream UI using the structured agent-chat connectors from PLAN-007.
-- [PLAN-006-wiki-family](plans/PLAN-006-wiki-family.md) - Rewrites the wiki reading view, workshop view, slides presenter, and loading screen while keeping legacy `/ws/chat` generation separate from agent chat.
+- [PLAN-006-wiki-family](plans/PLAN-006-wiki-family.md) - Implemented the wiki reading view, workshop view, slides presenter, and loading screen while keeping legacy `/ws/chat` generation separate from agent chat.
 - [PLAN-007-agent-chat-api](plans/PLAN-007-agent-chat-api.md) - Exposes the existing agent infrastructure through WebSocket and HTTP chat APIs with frontend connector utilities.
 - [PLAN-008-rag-tool](plans/PLAN-008-rag-tool.md) - Extracts RAG retrieval into a small CodeRetriever and exposes it to the agent as a rag_search tool, reusing the existing pickle cache.
 
