@@ -2,7 +2,7 @@
 number: PLAN-005
 name: Chat View
 description: Rewrites the Ask route into a chat-stream UI that matches the prototype, reusing the WebSocket client and Markdown renderer.
-update_at: 2026-05-05
+update_at: 2026-05-06
 category: improvement-plan
 language: en
 status: proposed
@@ -18,9 +18,11 @@ The prototype reframes this as a conversation: alternating user and AI messages,
 
 Backend protocol is unchanged. `WebSocket /ws/chat` still takes a `ChatCompletionRequest` with `messages: ChatMessage[]` and streams raw text chunks. The frontend now accumulates those messages across turns and keeps them in `localStorage`.
 
+All new code is written to `src_v2/`. The existing `src/` is left untouched.
+
 ## Target file
 
-`src/app/[owner]/[repo]/ask/page.tsx` — full rewrite, target under 200 lines.
+`src_v2/app/[owner]/[repo]/ask/page.tsx` — new file, target under 200 lines.
 
 ## Route parameters
 
@@ -44,9 +46,9 @@ Backend protocol is unchanged. `WebSocket /ws/chat` still takes a `ChatCompletio
 
 ## Components to build
 
-- `src/components/chat/ChatStream.tsx` (~80 lines) — renders the ordered list of messages with day dividers. Pure view; no state.
-- `src/components/chat/Message.tsx` (~60 lines) — one message bubble. Props: `role`, `content`, `timestamp`, `model?`, `citations?`. Uses `<Markdown>` from the existing `src/components/Markdown.tsx` to render `content`.
-- `src/components/chat/Citation.tsx` (~20 lines) — pill-shaped citation link. Hover reveals the file path.
+- `src_v2/components/chat/ChatStream.tsx` (~80 lines) — renders the ordered list of messages with day dividers. Pure view; no state.
+- `src_v2/components/chat/Message.tsx` (~60 lines) — one message bubble. Props: `role`, `content`, `timestamp`, `model?`, `citations?`. Uses `<Markdown>` from `src_v2/components/Markdown.tsx` to render `content`.
+- `src_v2/components/chat/Citation.tsx` (~20 lines) — pill-shaped citation link. Hover reveals the file path.
 
 ## State management
 
@@ -54,11 +56,11 @@ State lives in the page component via `useState` + `useEffect`. No Redux/Zustand
 
 1. User hits `↵` in `<Composer>`.
 2. Page constructs a `ChatCompletionRequest` from:
-   - `repo_url` — computed with `getRepoUrl(repoInfo)`.
+   - `repo_url` — computed with `getRepoUrl(repoInfo)` from `src_v2/utils/getRepoUrl.tsx`.
    - `messages` — all prior turns plus the new user message.
-   - `provider`, `model`, `token`, `excluded_*`, `included_*` — from `useSettings()` (PLAN-003).
+   - `provider`, `model`, `token`, `excluded_*`, `included_*` — from `useSettings()` (PLAN-003 `src_v2/contexts/SettingsContext.tsx`).
    - `language` — from `LanguageContext` (not user-toggleable in v1; defaults to "en").
-3. Opens a socket via `src/utils/websocketClient.ts` (reused).
+3. Opens a socket via `src_v2/utils/websocketClient.ts` (copied in PLAN-003).
 4. Appends an empty AI message with `streaming: true`. As chunks arrive, append to its `content`.
 5. On socket close:
    - Parse the accumulated text for a `## Citations` tail (prototype shows inline citation pills; extract them with a regex). Store on the message as `citations: string[]`.
@@ -100,27 +102,26 @@ Quota guard: if `localStorage` is >4MB, evict oldest conversations before writin
 
 ## Components to delete after this plan
 
-- `src/components/AskComposer.tsx`
-- `src/components/AskResultView.tsx`
+None — `src/` is left untouched. `src/components/AskComposer.tsx` and `src/components/AskResultView.tsx` remain in `src/` as-is.
 
 ## Critical files referenced or modified
 
 - `prototype/app-chat.html` — DOM source of truth
 - `prototype/styles.css:727-890` — chat-stream styles
-- `src/app/[owner]/[repo]/ask/page.tsx` — rewritten
-- `src/components/chat/*` — new folder
-- `src/components/Markdown.tsx` — reused as-is
-- `src/utils/websocketClient.ts` — reused as-is
-- `src/utils/getRepoUrl.tsx` — reused
-- `src/hooks/useConversationHistory.ts` — introduced in PLAN-003; consumed here
-- `src/contexts/SettingsContext.tsx` — introduced in PLAN-003; consumed here
+- `src_v2/app/[owner]/[repo]/ask/page.tsx` — new
+- `src_v2/components/chat/*` — new folder
+- `src_v2/components/Markdown.tsx` — copied from `src/` in PLAN-003
+- `src_v2/utils/websocketClient.ts` — copied from `src/` in PLAN-003
+- `src_v2/utils/getRepoUrl.tsx` — copied from `src/` in PLAN-003
+- `src_v2/hooks/useConversationHistory.ts` — introduced in PLAN-003
+- `src_v2/contexts/SettingsContext.tsx` — introduced in PLAN-003
 - `docs/api/frontend-backend-apis.md` §5.1 (`/ws/chat`), §5.2 (`/api/chat/stream` fallback) — contract
 
 ## Verification
 
 In addition to the PLAN-002 shared harness:
 
-1. Open `/[owner]/[repo]/ask` on a cached repository. Ask a question. The AI message populates token-by-token as the WebSocket streams.
+1. Open `src_v2/` `/[owner]/[repo]/ask` on a cached repository. Ask a question. The AI message populates token-by-token as the WebSocket streams.
 2. Refresh the page with the same `?convId`. The prior messages re-render from `localStorage`.
 3. Open DevTools → Network → WS frame inspector. Confirm the payload matches `ChatCompletionRequest` and contains the full `messages` history, not just the latest question.
 4. Simulate WS failure (stop the backend mid-request). The client retries over `POST /api/chat/stream` and continues streaming into the same message.
@@ -128,6 +129,7 @@ In addition to the PLAN-002 shared harness:
 6. The sidebar `<ProjectTree>` in `<AppShell>` updates immediately when a new conversation is started (shared hook, not a page-local store).
 7. A question with `?q=explain+hooks` in the URL auto-submits on mount.
 8. Visual parity with `prototype/app-chat.html` at 1440×900.
+9. `grep -r "from.*src/" src_v2/` returns no hits.
 
 ## Risks
 

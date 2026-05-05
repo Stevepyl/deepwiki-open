@@ -143,5 +143,70 @@
         "notes": "Implements the loading screen with best-effort phase parsing."
       }
     ]
+  },
+  {
+    "name": "Agent Chat Backend API",
+    "number": "PLAN-007",
+    "path": "PLAN-007-agent-chat-api.md",
+    "plan_status": "proposed",
+    "implementation_status": "not-started",
+    "evidence": [
+      "Plan frontmatter declares status: proposed.",
+      "No api/agent/chat_handler.py exists.",
+      "/ws/agent-chat route is not registered in api/api.py.",
+      "No src/types/agentChat.ts or src/utils/agentChatStream.ts."
+    ],
+    "sub_tasks": [
+      {
+        "name": "Extract shared helpers to api/agent/handler_utils.py",
+        "status": "not-started",
+        "notes": "Mechanical refactor of api/agent/wiki_generator.py:97-234. Blocks all subsequent steps."
+      },
+      {
+        "name": "Implement AgentChatRequest + _run_agent_chat core",
+        "status": "not-started",
+        "notes": "New module api/agent/chat_handler.py."
+      },
+      {
+        "name": "Add handle_agent_chat_websocket + register /ws/agent-chat",
+        "status": "not-started",
+        "notes": "Untagged events."
+      },
+      {
+        "name": "Add agent_chat_stream (NDJSON) + register /chat/agent-stream",
+        "status": "not-started",
+        "notes": "application/x-ndjson media type."
+      },
+      {
+        "name": "Add get_agent_info + register GET /agent/info",
+        "status": "not-started",
+        "notes": "Filtered to _ALLOWED_CHAT_AGENTS."
+      },
+      {
+        "name": "Add WebSocket + HTTP test files",
+        "status": "not-started",
+        "notes": "tests/api/test_agent_chat_websocket.py, tests/api/test_agent_chat_stream.py."
+      },
+      {
+        "name": "Frontend types src/types/agentChat.ts",
+        "status": "not-started",
+        "notes": "Discriminated union for all 5 chat-relevant events."
+      },
+      {
+        "name": "Extend src/utils/websocketClient.ts with createAgentChatWebSocket",
+        "status": "not-started",
+        "notes": "onEvent callback (not onMessage)."
+      },
+      {
+        "name": "Frontend HTTP connector src/utils/agentChatStream.ts",
+        "status": "not-started",
+        "notes": "Line-buffered NDJSON parsing."
+      },
+      {
+        "name": "Frontend Next.js proxy src/app/api/chat/agent-stream/route.ts",
+        "status": "not-started",
+        "notes": "Clone of existing chat proxy with target URL change."
+      }
+    ]
   }
 ]

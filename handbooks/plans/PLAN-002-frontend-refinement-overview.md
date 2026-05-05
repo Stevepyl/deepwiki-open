@@ -2,7 +2,7 @@
 number: PLAN-002
 name: OpsWiki Frontend Refinement Overview
 description: Cross-cutting plan that ties together the four sub-plans rebranding the frontend to the OpsWiki Paper and Ink prototype while preserving the existing FastAPI contract.
-update_at: 2026-05-05
+update_at: 2026-05-06
 category: improvement-plan
 language: en
 status: proposed
@@ -16,7 +16,7 @@ The current frontend in `src/` ships a Japanese-dark-aesthetic "DeepWiki-Open" U
 
 The static prototype under `prototype/` proposes a rebrand to **OpsWiki** with a single visual direction — "Paper and Ink", warm cream surfaces with rust orange accent, serif-led hierarchy, light mode only. Seven HTML files (`prototype/index.html`, `prototype/app-{chat,wiki,workshop,projects,slides,loading}.html`) demonstrate the full app surface against `prototype/styles.css` design tokens.
 
-This plan family reshapes the frontend toward that prototype without touching the FastAPI backend or the wire protocol documented in `docs/api/frontend-backend-apis.md`. Production-grade pieces — `src/components/Markdown.tsx`, `src/components/Mermaid.tsx`, `src/utils/websocketClient.ts`, the type definitions under `src/types/`, and the `useProcessedProjects` hook — are kept and reused; the UI shell, layouts, and configuration modals are replaced.
+This plan family builds the new frontend in `src_v2/` — a clean directory that is independent of the existing `src/`. The existing `src/` is left untouched. Production-grade pieces from `src/` that are worth reusing (Markdown renderer, Mermaid renderer, WebSocket client, type definitions, utility helpers) are **copied** into `src_v2/` rather than imported across directory boundaries.
 
 The work is split across four sub-plans (PLAN-003 through PLAN-006). This document is the index, the cross-cutting decision log, and the verification harness.
 
@@ -25,8 +25,9 @@ The work is split across four sub-plans (PLAN-003 through PLAN-006). This docume
 - Match the visual language of `prototype/` pixel-for-pixel on a 1440×900 viewport for the seven mapped routes.
 - Reduce the line count of every page module to fit in one screen of context (target: each `page.tsx` under 250 lines).
 - Keep the FastAPI request/response contract unchanged. No backend edits in this plan family.
-- Reuse shared rendering primitives (Markdown, Mermaid, WebSocket helper) so the streaming behavior remains identical.
+- Reuse shared rendering primitives (Markdown, Mermaid, WebSocket helper) — copy them into `src_v2/` so the new frontend is self-contained.
 - Drop dark mode and the wiki-type toggle (concise vs comprehensive); accept ADR-001's recommendation in code.
+- Leave `src/` entirely untouched. All new work lives in `src_v2/`.
 
 ## Non-goals
 
@@ -36,6 +37,7 @@ The work is split across four sub-plans (PLAN-003 through PLAN-006). This docume
 - `next/font` migration. Plans use `@import url(...)` from Google Fonts to match `prototype/styles.css` exactly; a font-loading optimization pass is deferred.
 - Removing `LanguageContext`. The plumbing stays; no UI affordance is added.
 - Command palette beyond focusing the sidebar search input on `⌘K`.
+- Any modification to `src/`. The old frontend is preserved as-is.
 
 ## Page map
 
@@ -56,10 +58,10 @@ The chat/wiki/workshop topbar exposes a 3-tab switcher and a "Present as slides"
 These apply across every sub-plan; they are not re-stated in each one.
 
 ### D1. Brand wordmark
-The product is rendered as **OpsWiki** with italic/roman contrast: `<em>Ops</em>Wiki`. A `<Wordmark size="hero" | "sidebar">` component lives in `src/components/shell/Wordmark.tsx`. The `package.json` `name` field, repository name, and backend identifier are not changed — only the user-visible UI string.
+The product is rendered as **OpsWiki** with italic/roman contrast: `<em>Ops</em>Wiki`. A `<Wordmark size="hero" | "sidebar">` component lives in `src_v2/components/shell/Wordmark.tsx`. The `package.json` `name` field, repository name, and backend identifier are not changed — only the user-visible UI string.
 
 ### D2. Light mode only
-`globals.css` is rewritten with the prototype's `:root` tokens. All `data-theme="dark"` selectors are removed. The `theme-toggle.tsx` component is deleted. CSS variables match `prototype/styles.css:7-47` exactly so a side-by-side comparison is meaningful.
+`src_v2/app/globals.css` is written with the prototype's `:root` tokens only — no `data-theme="dark"` selectors. There is no `theme-toggle` component in `src_v2/`. CSS variables match `prototype/styles.css:7-47` exactly so a side-by-side comparison is meaningful.
 
 ### D3. Configuration is hidden behind the topbar
 There is no on-landing configuration modal. The settings icon (gear) on the topbar opens a slide-in `<SettingsPanel>` that exposes:
@@ -93,32 +95,35 @@ The route moves from `/wiki/projects` to `/projects`. The old path is removed. T
 
 ### D9. Component reuse vs replacement
 
-**Keep and reuse as-is:**
-- `src/components/Markdown.tsx` — markdown + syntax highlighting + Mermaid embedding
-- `src/components/Mermaid.tsx` — diagram rendering
-- `src/utils/websocketClient.ts` — WS streaming with HTTP fallback
-- `src/utils/getRepoUrl.tsx`, `src/utils/urlDecoder.tsx` — URL helpers
-- `src/hooks/useProcessedProjects.ts` — projects list cache
-- `src/contexts/LanguageContext.tsx` — i18n plumbing (no UI hookup)
-- `src/types/**` — all type files
+**Copy into `src_v2/` and reuse:**
+- `src/components/Markdown.tsx` → `src_v2/components/Markdown.tsx`
+- `src/components/Mermaid.tsx` → `src_v2/components/Mermaid.tsx`
+- `src/utils/websocketClient.ts` → `src_v2/utils/websocketClient.ts`
+- `src/utils/getRepoUrl.tsx` → `src_v2/utils/getRepoUrl.tsx`
+- `src/utils/urlDecoder.tsx` → `src_v2/utils/urlDecoder.tsx`
+- `src/hooks/useProcessedProjects.ts` → `src_v2/hooks/useProcessedProjects.ts`
+- `src/contexts/LanguageContext.tsx` → `src_v2/contexts/LanguageContext.tsx`
+- `src/types/**` → `src_v2/types/**`
 
-**Replace (delete after migration):**
-- `src/app/page.tsx` (home)
-- `src/app/[owner]/[repo]/page.tsx` (wiki)
-- `src/app/[owner]/[repo]/ask/page.tsx`
-- `src/app/[owner]/[repo]/slides/page.tsx`
-- `src/app/[owner]/[repo]/workshop/page.tsx`
-- `src/app/wiki/projects/page.tsx`
-- `src/components/ConfigurationModal.tsx`
-- `src/components/ModelSelectionModal.tsx`
-- `src/components/WikiTypeSelector.tsx`
-- `src/components/UserSelector.tsx`
-- `src/components/TokenInput.tsx` (folded into `<SettingsPanel>`)
-- `src/components/ProcessedProjects.tsx` (replaced by `/projects` route components)
-- `src/components/AskComposer.tsx` (replaced by shared `<Composer>`)
-- `src/components/AskResultView.tsx` (replaced by `<ChatStream>` + `<Message>`)
-- `src/components/WikiTreeView.tsx` (replaced by `<WikiTree>` matching prototype)
-- `src/components/theme-toggle.tsx` (dark mode dropped)
+All imports within `src_v2/` reference `src_v2/` paths only. No cross-directory imports between `src/` and `src_v2/`.
+
+**Build new in `src_v2/` (no equivalent in `src/`):**
+- `src_v2/app/page.tsx` (home)
+- `src_v2/app/[owner]/[repo]/page.tsx` (wiki)
+- `src_v2/app/[owner]/[repo]/ask/page.tsx`
+- `src_v2/app/[owner]/[repo]/slides/page.tsx`
+- `src_v2/app/[owner]/[repo]/workshop/page.tsx`
+- `src_v2/app/projects/page.tsx`
+- `src_v2/components/shell/*`
+- `src_v2/components/chat/*`
+- `src_v2/components/wiki/*`
+- `src_v2/components/workshop/*`
+- `src_v2/components/slides/*`
+- `src_v2/components/generation/*`
+- `src_v2/components/welcome/*`
+- `src_v2/components/projects/*`
+- `src_v2/contexts/SettingsContext.tsx`
+- `src_v2/hooks/useConversationHistory.ts`
 
 ## Sub-plan graph
 
@@ -139,9 +144,9 @@ PLAN-003 must merge before any other sub-plan can land — every other plan impo
 - `prototype/styles.css:7-47` — the canonical token set
 - `prototype/*.html` — the seven target screens
 - `docs/api/frontend-backend-apis.md` — the unchanged backend contract
-- `src/app/layout.tsx` — root layout (will lose `ThemeProvider`, keep `LanguageProvider`)
-- `src/app/globals.css` — full rewrite
-- `next.config.ts` — rewrites are unchanged
+- `src_v2/app/layout.tsx` — root layout (no `ThemeProvider`, has `LanguageProvider` and `SettingsProvider`)
+- `src_v2/app/globals.css` — full rewrite with Paper and Ink tokens
+- `next.config.ts` — rewrites are unchanged (still proxies to Python backend)
 - `tailwind.config.js` — token registration only
 
 ## Verification
