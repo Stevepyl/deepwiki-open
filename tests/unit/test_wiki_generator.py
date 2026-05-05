@@ -12,12 +12,11 @@ Tests cover:
 import pytest
 
 from api.agent.config import get_agent_config
+from api.agent.handler_utils import compute_repo_name
 from api.agent.wiki_generator import (
-    _compute_repo_name,
     _flatten_pages_in_section_order,
     _validate_wiki_structure,
     parse_wiki_structure,
-    AgentWikiRequest,
 )
 
 
@@ -214,28 +213,20 @@ class TestFlattenPagesInSectionOrder:
 
 
 class TestComputeRepoName:
-    def _req(self, url: str, repo_type: str = "github") -> AgentWikiRequest:
-        return AgentWikiRequest(repo_url=url, type=repo_type)
-
     def test_github_url(self):
-        req = self._req("https://github.com/owner/my-repo")
-        assert _compute_repo_name(req) == "owner_my-repo"
+        assert compute_repo_name("https://github.com/owner/my-repo", "github") == "owner_my-repo"
 
     def test_gitlab_url(self):
-        req = self._req("https://gitlab.com/org/project", "gitlab")
-        assert _compute_repo_name(req) == "org_project"
+        assert compute_repo_name("https://gitlab.com/org/project", "gitlab") == "org_project"
 
     def test_strips_dot_git(self):
-        req = self._req("https://github.com/alice/repo.git")
-        assert _compute_repo_name(req) == "alice_repo"
+        assert compute_repo_name("https://github.com/alice/repo.git", "github") == "alice_repo"
 
     def test_trailing_slash_stripped(self):
-        req = self._req("https://github.com/owner/repo/")
-        assert _compute_repo_name(req) == "owner_repo"
+        assert compute_repo_name("https://github.com/owner/repo/", "github") == "owner_repo"
 
     def test_unknown_type_uses_last_segment(self):
-        req = self._req("https://example.com/somerepo", "local")
-        assert _compute_repo_name(req) == "somerepo"
+        assert compute_repo_name("https://example.com/somerepo", "local") == "somerepo"
 
 
 # ---------------------------------------------------------------------------

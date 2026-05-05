@@ -23,7 +23,6 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import os
 import re
 from typing import Any, Optional
 
@@ -32,9 +31,19 @@ from fastapi.websockets import WebSocketDisconnect
 from pydantic import BaseModel
 
 from api.agent.config import get_agent_config, get_tools_for_agent
-from api.agent.loop import run_agent_loop
 from api.agent.message import AgentMessage
 from api.agent.provider import UnifiedProvider
+from api.agent.handler_utils import (
+    compute_repo_name,
+    compute_repo_path,
+    consume_agent_loop,
+    language_name,
+    parse_request_filters,
+    safe_close,
+    safe_send,
+    send_event,
+    send_tagged_event,
+)
 from api.agent.stream_events import (
     FinishEvent,
     StreamEvent,
@@ -57,7 +66,6 @@ logger = logging.getLogger(__name__)
 
 _PHASE1_TIMEOUT_S = 300   # 5 min planner ceiling
 _PHASE2_TIMEOUT_S = 300   # 5 min per-page writer ceiling
-_ADALFLOW_ROOT = os.path.expanduser(os.path.join("~", ".adalflow"))
 
 _COMPREHENSIVE_INSTRUCTION = (
     "Generate 15-20 pages. Include a 'sections' array that groups pages into "
@@ -90,58 +98,6 @@ class AgentWikiRequest(BaseModel):
     included_files: Optional[str] = None
 
 # ---------------------------------------------------------------------------
-# Repo-path helpers
-# ---------------------------------------------------------------------------
-
-
-def _compute_repo_name(req: AgentWikiRequest) -> str:
-    """Mirrors DatabaseManager._extract_repo_name_from_url logic."""
-    url_parts = req.repo_url.rstrip("/").split("/")
-    if req.type in ("github", "gitlab", "bitbucket") and len(url_parts) >= 5:
-        owner = url_parts[-2]
-        repo = url_parts[-1].replace(".git", "")
-        return f"{owner}_{repo}"
-    return url_parts[-1].replace(".git", "")
-
-
-def _compute_repo_path(req: AgentWikiRequest) -> str:
-    repo_name = _compute_repo_name(req)
-    return os.path.join(_ADALFLOW_ROOT, "repos", repo_name)
-
-
-def _parse_request_filters(req: AgentWikiRequest) -> ParsedFilters:
-    """Build ParsedFilters from the request's filter string fields."""
-    return ParsedFilters.from_strings(
-        excluded_dirs=req.excluded_dirs,
-        excluded_files=req.excluded_files,
-        included_dirs=req.included_dirs,
-        included_files=req.included_files,
-    )
-
-
-# ---------------------------------------------------------------------------
-# Language name lookup (mirrors existing convention in prompts)
-# ---------------------------------------------------------------------------
-
-_LANGUAGE_NAMES: dict[str, str] = {
-    "en": "English",
-    "zh": "Chinese",
-    "ja": "Japanese",
-    "ko": "Korean",
-    "es": "Spanish",
-    "fr": "French",
-    "de": "German",
-    "pt": "Portuguese",
-    "ru": "Russian",
-    "ar": "Arabic",
-}
-
-
-def _language_name(code: str) -> str:
-    return _LANGUAGE_NAMES.get(code, code)
-
-
-# ---------------------------------------------------------------------------
 # system_prompt_vars builders
 # ---------------------------------------------------------------------------
 
@@ -150,8 +106,8 @@ def _planner_prompt_vars(req: AgentWikiRequest) -> dict[str, str]:
     return {
         "repo_type": req.type,
         "repo_url": req.repo_url,
-        "repo_name": _compute_repo_name(req),
-        "language_name": _language_name(req.language),
+        "repo_name": compute_repo_name(req.repo_url, req.type),
+        "language_name": language_name(req.language),
         "comprehensive_instruction": (
             _COMPREHENSIVE_INSTRUCTION if req.comprehensive else _CONCISE_INSTRUCTION
         ),
@@ -162,8 +118,8 @@ def _writer_prompt_vars(req: AgentWikiRequest) -> dict[str, str]:
     return {
         "repo_type": req.type,
         "repo_url": req.repo_url,
-        "repo_name": _compute_repo_name(req),
-        "language_name": _language_name(req.language),
+        "repo_name": compute_repo_name(req.repo_url, req.type),
+        "language_name": language_name(req.language),
     }
 
 
@@ -200,38 +156,8 @@ def _format_writer_user_prompt(page: dict[str, Any], language: str) -> str:
         f"Relevant file paths (hints — verify each before citing):\n{hints or '(none provided)'}\n\n"
         f"Related pages: {related_str}\n\n"
         "Follow the explore-then-write workflow: verify hints, explore related files, then write. "
-        f"Write all prose in {_language_name(language)}."
+        f"Write all prose in {language_name(language)}."
     )
-
-
-# ---------------------------------------------------------------------------
-# WebSocket send helpers
-# ---------------------------------------------------------------------------
-
-
-async def _send_event(ws: WebSocket, evt: BaseModel) -> None:
-    await ws.send_json(evt.model_dump())
-
-
-async def _send_tagged_event(ws: WebSocket, evt: StreamEvent, **tags: Any) -> None:
-    """Send a StreamEvent with extra phase/page metadata (envelope pattern)."""
-    payload = evt.model_dump()
-    payload.update(tags)
-    await ws.send_json(payload)
-
-
-async def _safe_send(ws: WebSocket, evt: BaseModel) -> None:
-    try:
-        await ws.send_json(evt.model_dump())
-    except Exception:
-        pass
-
-
-async def _safe_close(ws: WebSocket) -> None:
-    try:
-        await ws.close()
-    except Exception:
-        pass
 
 
 # ---------------------------------------------------------------------------
@@ -342,26 +268,6 @@ def _flatten_pages_in_section_order(structure: dict[str, Any]) -> list[dict[str,
 
 
 # ---------------------------------------------------------------------------
-# Phase coroutine wrappers (needed for asyncio.wait_for)
-# ---------------------------------------------------------------------------
-
-
-async def _consume_agent_loop(
-    agent_config,
-    messages: list[AgentMessage],
-    provider: UnifiedProvider,
-    tools: dict,
-    repo_path: str,
-    system_prompt_vars: dict[str, str],
-    on_event,
-) -> None:
-    async for evt in run_agent_loop(
-        agent_config, messages, provider, tools, repo_path, system_prompt_vars
-    ):
-        await on_event(evt)
-
-
-# ---------------------------------------------------------------------------
 # Phase 1 — planner
 # ---------------------------------------------------------------------------
 
@@ -379,7 +285,7 @@ async def _run_planner_phase(
     try:
         provider = UnifiedProvider(req.provider, req.model or "")
     except (ValueError, Exception) as exc:
-        await _send_event(ws, WikiStructureError(
+        await send_event(ws, WikiStructureError(
             code="internal_error",
             message=f"Provider initialisation failed: {exc}",
         ))
@@ -393,11 +299,11 @@ async def _run_planner_phase(
     async def on_event(evt: StreamEvent) -> None:
         if isinstance(evt, TextDelta):
             collected.append(evt.content)
-        await _send_tagged_event(ws, evt, phase="planning")
+        await send_tagged_event(ws, evt, phase="planning")
 
     try:
         await asyncio.wait_for(
-            _consume_agent_loop(
+            consume_agent_loop(
                 config,
                 [AgentMessage.user(user_prompt)],
                 provider,
@@ -409,14 +315,14 @@ async def _run_planner_phase(
             timeout=_PHASE1_TIMEOUT_S,
         )
     except asyncio.TimeoutError:
-        await _send_event(ws, WikiStructureError(
+        await send_event(ws, WikiStructureError(
             code="planner_timeout",
             message=f"Wiki planner exceeded {_PHASE1_TIMEOUT_S}s",
         ))
         return None
     except Exception as exc:
         logger.exception("Planner phase raised unexpected error")
-        await _send_event(ws, WikiStructureError(
+        await send_event(ws, WikiStructureError(
             code="internal_error", message=str(exc),
         ))
         return None
@@ -424,13 +330,13 @@ async def _run_planner_phase(
     raw = "".join(collected)
     structure = parse_wiki_structure(raw)
     if structure is None:
-        await _send_event(ws, WikiStructureError(
+        await send_event(ws, WikiStructureError(
             code="json_parse_error",
             message="Planner output could not be parsed as a valid wiki structure",
         ))
         return None
 
-    await _send_event(ws, WikiStructureReady(structure=structure))
+    await send_event(ws, WikiStructureReady(structure=structure))
     return structure
 
 
@@ -453,7 +359,7 @@ async def _run_writer_phase(
     try:
         provider = UnifiedProvider(req.provider, req.model or "")
     except Exception as exc:
-        await _send_event(ws, WikiPageError(
+        await send_event(ws, WikiPageError(
             page_id=page["id"],
             page_index=page_index,
             code="writer_failed",
@@ -467,7 +373,7 @@ async def _run_writer_phase(
     async def on_event(evt: StreamEvent) -> None:
         if isinstance(evt, TextDelta):
             content.append(evt.content)
-        await _send_tagged_event(
+        await send_tagged_event(
             ws, evt,
             phase="writing",
             page_index=page_index,
@@ -476,7 +382,7 @@ async def _run_writer_phase(
 
     try:
         await asyncio.wait_for(
-            _consume_agent_loop(
+            consume_agent_loop(
                 config,
                 [AgentMessage.user(user_prompt)],
                 provider,
@@ -488,7 +394,7 @@ async def _run_writer_phase(
             timeout=_PHASE2_TIMEOUT_S,
         )
     except asyncio.TimeoutError:
-        await _send_event(ws, WikiPageError(
+        await send_event(ws, WikiPageError(
             page_id=page["id"],
             page_index=page_index,
             code="writer_timeout",
@@ -497,7 +403,7 @@ async def _run_writer_phase(
         return
     except Exception as exc:
         logger.exception("Writer phase raised unexpected error for page '%s'", page.get("title"))
-        await _send_event(ws, WikiPageError(
+        await send_event(ws, WikiPageError(
             page_id=page["id"],
             page_index=page_index,
             code="writer_failed",
@@ -505,7 +411,7 @@ async def _run_writer_phase(
         ))
         return
 
-    await _send_event(ws, WikiPageDone(
+    await send_event(ws, WikiPageDone(
         page_id=page["id"],
         page_title=page["title"],
         page_index=page_index,
@@ -526,28 +432,33 @@ async def handle_agent_wiki_websocket(websocket: WebSocket) -> None:
         try:
             req = AgentWikiRequest.model_validate(raw)
         except Exception as exc:
-            await _safe_send(websocket, WikiStructureError(
+            await safe_send(websocket, WikiStructureError(
                 code="internal_error",
                 message=f"Invalid request: {exc}",
             ))
             return
 
         # Step 1: ensure repo is cloned locally (idempotent)
-        repo_path = _compute_repo_path(req)
+        repo_path = compute_repo_path(req.repo_url, req.type)
         try:
             await asyncio.to_thread(
                 download_repo, req.repo_url, repo_path, req.type, req.token,
             )
         except Exception as exc:
             logger.exception("download_repo failed for %s", req.repo_url)
-            await _safe_send(websocket, WikiStructureError(
+            await safe_send(websocket, WikiStructureError(
                 code="clone_failed",
                 message=f"Failed to clone repository: {exc}",
             ))
             return
 
         # Step 2: parse filter rules from request
-        filters = _parse_request_filters(req)
+        filters = parse_request_filters(
+            req.excluded_dirs,
+            req.excluded_files,
+            req.included_dirs,
+            req.included_files,
+        )
 
         # Step 3: build file context (prefer front-end hints to avoid redundant walk;
         #          apply user filters so the planner hint is already scoped)
@@ -567,14 +478,14 @@ async def handle_agent_wiki_websocket(websocket: WebSocket) -> None:
         for idx, page in enumerate(pages):
             await _run_writer_phase(websocket, req, repo_path, page, idx, total, filters)
 
-        await _send_event(websocket, FinishEvent(finish_reason="stop"))
+        await send_event(websocket, FinishEvent(finish_reason="stop"))
 
     except WebSocketDisconnect:
         logger.info("agent-wiki: client disconnected")
     except Exception as exc:
         logger.exception("agent-wiki: unhandled exception")
-        await _safe_send(websocket, WikiStructureError(
+        await safe_send(websocket, WikiStructureError(
             code="internal_error", message=str(exc),
         ))
     finally:
-        await _safe_close(websocket)
+        await safe_close(websocket)

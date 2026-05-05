@@ -404,6 +404,16 @@ app.add_api_websocket_route("/ws/chat", handle_websocket_chat)
 from api.agent.wiki_generator import handle_agent_wiki_websocket  # noqa: E402
 app.add_api_websocket_route("/ws/agent-wiki", handle_agent_wiki_websocket)
 
+# Add the agent chat endpoints
+from api.agent.chat_handler import (  # noqa: E402
+    agent_chat_stream,
+    get_agent_info,
+    handle_agent_chat_websocket,
+)
+app.add_api_websocket_route("/ws/agent-chat", handle_agent_chat_websocket)
+app.add_api_route("/chat/agent-stream", agent_chat_stream, methods=["POST"])
+app.add_api_route("/agent/info", get_agent_info, methods=["GET"])
+
 # --- Wiki Cache Helper Functions ---
 
 WIKI_CACHE_DIR = os.path.join(get_adalflow_default_root_path(), "wikicache")

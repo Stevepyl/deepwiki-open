@@ -3,6 +3,8 @@
  * This replaces the HTTP streaming endpoint with a WebSocket connection
  */
 
+import type { AgentChatEvent, AgentChatRequest } from '@/types/agentChat';
+
 // Get the server base URL from environment or use default
 const SERVER_BASE_URL = process.env.SERVER_BASE_URL || 'http://localhost:8001';
 
@@ -12,6 +14,11 @@ const getWebSocketUrl = () => {
   // Replace http:// with ws:// or https:// with wss://
   const wsBaseUrl = baseUrl.replace(/^http/, 'ws');
   return `${wsBaseUrl}/ws/chat`;
+};
+
+const getAgentChatWebSocketUrl = () => {
+  const wsBaseUrl = SERVER_BASE_URL.replace(/^http/, 'ws');
+  return `${wsBaseUrl}/ws/agent-chat`;
 };
 
 export interface ChatMessage {
@@ -71,6 +78,33 @@ export const createChatWebSocket = (
     onClose();
   };
   
+  return ws;
+};
+
+export const createAgentChatWebSocket = (
+  request: AgentChatRequest,
+  onEvent: (event: AgentChatEvent) => void,
+  onError: (error: Event) => void,
+  onClose: () => void
+): WebSocket => {
+  const ws = new WebSocket(getAgentChatWebSocketUrl());
+
+  ws.onopen = () => {
+    ws.send(JSON.stringify(request));
+  };
+
+  ws.onmessage = (event) => {
+    onEvent(JSON.parse(event.data) as AgentChatEvent);
+  };
+
+  ws.onerror = (error) => {
+    onError(error);
+  };
+
+  ws.onclose = () => {
+    onClose();
+  };
+
   return ws;
 };
 

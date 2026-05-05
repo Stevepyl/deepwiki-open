@@ -2,7 +2,7 @@ import requests
 import json
 import sys
 
-def test_streaming_endpoint(repo_url, query, file_path=None):
+def streaming_endpoint_smoke(repo_url, query, file_path=None):
     """
     Test the streaming endpoint with a given repository URL and query.
     
@@ -67,4 +67,4 @@ if __name__ == "__main__":
     query = sys.argv[2]
     file_path = sys.argv[3] if len(sys.argv) > 3 else None
     
-    test_streaming_endpoint(repo_url, query, file_path)
+    streaming_endpoint_smoke(repo_url, query, file_path)
