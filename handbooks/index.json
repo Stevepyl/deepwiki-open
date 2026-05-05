@@ -15,6 +15,31 @@
     "description": "Proposes replacing word-based splitting with an AST-aware code splitter while preserving the existing pipeline contract."
   },
   {
+    "name": "OpsWiki Frontend Refinement Overview",
+    "number": "PLAN-002",
+    "description": "Cross-cutting plan that ties together the four sub-plans rebranding the frontend to the OpsWiki Paper and Ink prototype while preserving the existing FastAPI contract."
+  },
+  {
+    "name": "Foundation Design Tokens and App Shell",
+    "number": "PLAN-003",
+    "description": "Replaces the dark-mode token set with the prototype Paper and Ink tokens, rebuilds the shared app shell, and deletes obsolete configuration modals."
+  },
+  {
+    "name": "Welcome and Projects Directory",
+    "number": "PLAN-004",
+    "description": "Rewrites the home route and the projects directory to match the OpsWiki welcome page and project library prototypes."
+  },
+  {
+    "name": "Chat View",
+    "number": "PLAN-005",
+    "description": "Rewrites the Ask route into a chat-stream UI that matches the prototype, reusing the WebSocket client and Markdown renderer."
+  },
+  {
+    "name": "Wiki Workshop Slides and Loading",
+    "number": "PLAN-006",
+    "description": "Rewrites the wiki reading view, workshop view, slides presenter, and the generation loading screen to match the OpsWiki prototypes."
+  },
+  {
     "name": "Agent Wiki Generation Backend",
     "number": "REC-001",
     "description": "Records the Path B backend implementation for two-stage agent-driven wiki generation and its WebSocket protocol."

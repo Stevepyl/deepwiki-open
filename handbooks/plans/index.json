@@ -11,5 +11,137 @@
       "prepare_data_pipeline still constructs TextSplitter(**configs[\"text_splitter\"])."
     ],
     "sub_tasks": []
+  },
+  {
+    "name": "OpsWiki Frontend Refinement Overview",
+    "number": "PLAN-002",
+    "path": "PLAN-002-frontend-refinement-overview.md",
+    "plan_status": "proposed",
+    "implementation_status": "not-started",
+    "evidence": [
+      "Plan frontmatter declares status: proposed.",
+      "src/app/layout.tsx still loads ThemeProvider.",
+      "src/app/page.tsx still renders the DeepWiki welcome.",
+      "No src/components/shell/ folder exists."
+    ],
+    "sub_tasks": []
+  },
+  {
+    "name": "Foundation Design Tokens and App Shell",
+    "number": "PLAN-003",
+    "path": "PLAN-003-foundation.md",
+    "plan_status": "proposed",
+    "implementation_status": "not-started",
+    "evidence": [
+      "Plan frontmatter declares status: proposed.",
+      "src/app/globals.css still carries dark-mode tokens.",
+      "src/components/ConfigurationModal.tsx and src/components/theme-toggle.tsx are still present.",
+      "No src/components/shell/ folder exists."
+    ],
+    "sub_tasks": [
+      {
+        "name": "Token rewrite of globals.css",
+        "status": "not-started",
+        "notes": "Plan step 1; blocks every other shell task."
+      },
+      {
+        "name": "Build shared shell components under src/components/shell/",
+        "status": "not-started",
+        "notes": "Includes AppShell, Sidebar, Topbar, Composer, Wordmark, SettingsPanel."
+      },
+      {
+        "name": "Introduce SettingsContext and useConversationHistory",
+        "status": "not-started",
+        "notes": "Feeds PLAN-005 and PLAN-006."
+      },
+      {
+        "name": "Delete orphaned components",
+        "status": "not-started",
+        "notes": "Final commit of the plan — theme-toggle, ConfigurationModal, ModelSelectionModal, WikiTypeSelector, UserSelector, TokenInput, ProcessedProjects."
+      }
+    ]
+  },
+  {
+    "name": "Welcome and Projects Directory",
+    "number": "PLAN-004",
+    "path": "PLAN-004-welcome-and-projects.md",
+    "plan_status": "proposed",
+    "implementation_status": "not-started",
+    "evidence": [
+      "Plan frontmatter declares status: proposed.",
+      "src/app/page.tsx is 627 lines rendering the current home.",
+      "src/app/wiki/projects/page.tsx is the active projects route.",
+      "src/app/projects/ does not exist."
+    ],
+    "sub_tasks": [
+      {
+        "name": "Rewrite src/app/page.tsx welcome route",
+        "status": "not-started",
+        "notes": "Under 120 lines target."
+      },
+      {
+        "name": "Create src/app/projects/page.tsx and delete src/app/wiki/projects/",
+        "status": "not-started",
+        "notes": "New /projects URL per PLAN-002 D8."
+      }
+    ]
+  },
+  {
+    "name": "Chat View",
+    "number": "PLAN-005",
+    "path": "PLAN-005-chat-view.md",
+    "plan_status": "proposed",
+    "implementation_status": "not-started",
+    "evidence": [
+      "Plan frontmatter declares status: proposed.",
+      "src/app/[owner]/[repo]/ask/page.tsx (583 lines) still uses AskComposer and AskResultView."
+    ],
+    "sub_tasks": [
+      {
+        "name": "Rewrite src/app/[owner]/[repo]/ask/page.tsx",
+        "status": "not-started",
+        "notes": "Under 200 lines target."
+      },
+      {
+        "name": "Build ChatStream, Message, Citation under src/components/chat/",
+        "status": "not-started",
+        "notes": "Reuses Markdown component."
+      }
+    ]
+  },
+  {
+    "name": "Wiki Workshop Slides and Loading",
+    "number": "PLAN-006",
+    "path": "PLAN-006-wiki-family.md",
+    "plan_status": "proposed",
+    "implementation_status": "not-started",
+    "evidence": [
+      "Plan frontmatter declares status: proposed.",
+      "src/app/[owner]/[repo]/page.tsx is 2267 lines.",
+      "src/components/WikiTreeView.tsx is still the TOC.",
+      "No src/components/generation/ folder exists."
+    ],
+    "sub_tasks": [
+      {
+        "name": "Rewrite src/app/[owner]/[repo]/page.tsx wiki route",
+        "status": "not-started",
+        "notes": "Under 250 lines target."
+      },
+      {
+        "name": "Rewrite src/app/[owner]/[repo]/workshop/page.tsx",
+        "status": "not-started",
+        "notes": "Under 200 lines target."
+      },
+      {
+        "name": "Rewrite src/app/[owner]/[repo]/slides/page.tsx",
+        "status": "not-started",
+        "notes": "Under 200 lines target."
+      },
+      {
+        "name": "Build GenerationLoader and useGenerationPhases hook",
+        "status": "not-started",
+        "notes": "Implements the loading screen with best-effort phase parsing."
+      }
+    ]
   }
 ]

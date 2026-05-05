@@ -20,6 +20,11 @@ Read this index first when looking for plans, decisions, implementation records,
 
 - [PLAN-INDEX](plans/index.md) - Tracks implementation status for plans and their sub-tasks under handbooks/plans.
 - [PLAN-001-ast-code-splitter](plans/PLAN-001-ast-code-splitter.md) - Proposes replacing word-based splitting with an AST-aware code splitter while preserving the existing pipeline contract.
+- [PLAN-002-frontend-refinement-overview](plans/PLAN-002-frontend-refinement-overview.md) - Cross-cutting plan that ties together the four sub-plans rebranding the frontend to the OpsWiki Paper and Ink prototype.
+- [PLAN-003-foundation](plans/PLAN-003-foundation.md) - Replaces the dark-mode token set with the prototype Paper and Ink tokens, rebuilds the shared app shell, and deletes obsolete configuration modals.
+- [PLAN-004-welcome-and-projects](plans/PLAN-004-welcome-and-projects.md) - Rewrites the home route and the projects directory to match the OpsWiki welcome page and project library prototypes.
+- [PLAN-005-chat-view](plans/PLAN-005-chat-view.md) - Rewrites the Ask route into a chat-stream UI that matches the prototype, reusing the WebSocket client and Markdown renderer.
+- [PLAN-006-wiki-family](plans/PLAN-006-wiki-family.md) - Rewrites the wiki reading view, workshop view, slides presenter, and the generation loading screen to match the OpsWiki prototypes.
 
 ## Implementation Records
 
