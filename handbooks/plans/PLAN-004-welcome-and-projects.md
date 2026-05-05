@@ -12,16 +12,16 @@ status: proposed
 
 ## Context
 
-Two entry points. `src/app/page.tsx` is 627 lines of demo-diagrams, processed-projects grid, and configuration-modal scaffolding. `src/app/wiki/projects/page.tsx` duplicates parts of that. The prototype replaces both with a much smaller surface:
+Two entry points. `src_old/app/page.tsx` is 627 lines of demo-diagrams, processed-projects grid, and configuration-modal scaffolding. `src_old/app/wiki/projects/page.tsx` duplicates parts of that. The prototype replaces both with a much smaller surface:
 
 - `prototype/index.html` — centered hero, paper-scratch search, 2×2 example repo grid, top-left breadcrumb to `/projects`.
 - `prototype/app-projects.html` — alphabetical rail on the left, grouped card grid on the right, filter input, grid/list toggle.
 
-This plan builds both routes in `src_v2/`, reusing the `useProcessedProjects` hook (copied in PLAN-003) and the shell primitives from PLAN-003. The existing `src/` files are left untouched.
+This plan builds both routes in `src/`, reusing the `useProcessedProjects` hook (copied in PLAN-003) and the shell primitives from PLAN-003. The existing `src_old/` files are left untouched.
 
 ## Styling rule — Tailwind-first
 
-Write all new markup with Tailwind utility classes referencing the Paper and Ink tokens registered by PLAN-003's `@theme` block in `src_v2/app/globals.css`. Example: `className="bg-[var(--paper)] text-[var(--ink-primary)] px-6 py-4 rounded-[var(--radius-md)]"`.
+Write all new markup with Tailwind utility classes referencing the Paper and Ink tokens registered by PLAN-003's `@theme` block in `src/app/globals.css`. Example: `className="bg-[var(--paper)] text-[var(--ink-primary)] px-6 py-4 rounded-[var(--radius-md)]"`.
 
 Fall back to prototype CSS class names (e.g. `.welcome`, `.scratch-input`, `.paper-panel`) only when Tailwind cannot express the rule cleanly — non-trivial pseudo-elements, complex gradients/filters, or the paper-scratch texture layers. When you do fall back, colocate the rule in `globals.css` under a clearly labeled section; do not create per-component CSS files.
 
@@ -31,7 +31,7 @@ Never introduce new dark-mode selectors or `data-theme` branches. Tokens drive t
 
 ### Target file
 
-`src_v2/app/page.tsx` — new file, target under 120 lines.
+`src/app/page.tsx` — new file, target under 120 lines.
 
 ### Structure
 
@@ -44,7 +44,7 @@ Never introduce new dark-mode selectors or `data-theme` branches. Tokens drive t
   - Serif italic subtitle: "Understand repos with AI".
 - Paper-scratch search form:
   - Single text input, placeholder "Paste a GitHub URL, or describe what you want to understand…".
-  - Submit handler: parse the input with `src_v2/utils/urlDecoder.tsx`. If it is a repo URL, navigate to `/[owner]/[repo]?status=generating`. If not, navigate to `/?q=<query>` with a toast — do not block. For v1, accept only URLs; non-URL input just shows an inline hint.
+  - Submit handler: parse the input with `src/utils/urlDecoder.tsx`. If it is a repo URL, navigate to `/[owner]/[repo]?status=generating`. If not, navigate to `/?q=<query>` with a toast — do not block. For v1, accept only URLs; non-URL input just shows an inline hint.
 - Example cards (2×2 grid of four hardcoded repos matching `prototype/index.html:39-55`). Click navigates to `/[owner]/[repo]?status=generating` for chat-preferred examples and `/[owner]/[repo]` for wiki-preferred examples, as the prototype links suggest.
 - Footer: keyboard hint with `<kbd>↵</kbd>` and `<kbd>⌘K</kbd>`. `⌘K` focuses the page's search input. `↵` in the focused input submits.
 
@@ -56,18 +56,18 @@ Never introduce new dark-mode selectors or `data-theme` branches. Tokens drive t
 
 ### Components to build
 
-- `src_v2/components/welcome/ScratchInput.tsx` (~50 lines) — the paper-scratch input from `prototype/styles.css:178-240`.
-- `src_v2/components/welcome/ExampleCard.tsx` (~25 lines) — `prototype/styles.css:275-305`.
+- `src/components/welcome/ScratchInput.tsx` (~50 lines) — the paper-scratch input from `prototype/styles.css:178-240`.
+- `src/components/welcome/ExampleCard.tsx` (~25 lines) — `prototype/styles.css:275-305`.
 
 ### Components to delete after this plan
 
-None — `src/` is left untouched. The old `src/components/ConfigurationModal.tsx` and `src/components/ProcessedProjects.tsx` remain in `src/` as-is.
+None — `src_old/` is left untouched. The old `src_old/components/ConfigurationModal.tsx` and `src_old/components/ProcessedProjects.tsx` remain in `src_old/` as-is.
 
 ## Projects directory
 
 ### Target file
 
-`src_v2/app/projects/page.tsx` — new route.
+`src/app/projects/page.tsx` — new route.
 
 Target length: under 180 lines.
 
@@ -84,47 +84,47 @@ Target length: under 180 lines.
 
 ### Data and side effects
 
-- `useProcessedProjects()` hook (copied in PLAN-003 to `src_v2/hooks/useProcessedProjects.ts`) returns the list from `GET /api/wiki/projects`.
+- `useProcessedProjects()` hook (copied in PLAN-003 to `src/hooks/useProcessedProjects.ts`) returns the list from `GET /api/wiki/projects`.
 - Project description comes from... the backend does not provide one. For v1, the card description is blank. A future enhancement can join wiki cache metadata. Plan placeholder: "Generated wiki for `<path>`." — kept in one helper, not inlined.
-- Conversation count comes from `useConversationHistory()` (PLAN-003 `src_v2/hooks/useConversationHistory.ts`): count conversations whose `repoKey === ${type}:${owner}/${repo}`.
+- Conversation count comes from `useConversationHistory()` (PLAN-003 `src/hooks/useConversationHistory.ts`): count conversations whose `repoKey === ${type}:${owner}/${repo}`.
 - Wiki-pages count: the backend `GET /api/wiki/projects` does not include a page count. For v1, omit that metric. Display only `N convs · <time>`.
 - Delete flow (card hover action): calls `DELETE /api/wiki/projects` with `{ owner, repo, repo_type, language }` (language from settings or `"en"`). Documented caveat in `docs/api/frontend-backend-apis.md` §4.6: backend auth-mode is not forwarded; accept that limitation in v1 and surface a toast "Deletion failed — auth required" if the backend returns 401.
 
 ### Components to build
 
-- `src_v2/components/projects/AlphaRail.tsx` (~60 lines).
-- `src_v2/components/projects/DirCard.tsx` (~40 lines).
-- `src_v2/components/projects/FilterInput.tsx` (~25 lines) — reuses `<ScratchInput>` visual styling, smaller size.
+- `src/components/projects/AlphaRail.tsx` (~60 lines).
+- `src/components/projects/DirCard.tsx` (~40 lines).
+- `src/components/projects/FilterInput.tsx` (~25 lines) — reuses `<ScratchInput>` visual styling, smaller size.
 
 ### Routing
 
-- Add `src_v2/app/projects/page.tsx`.
-- The old `src/app/wiki/projects/page.tsx` stays in place (not deleted).
+- Add `src/app/projects/page.tsx`.
+- The old `src_old/app/wiki/projects/page.tsx` stays in place (not deleted).
 
 ## Critical files referenced or modified
 
 - `prototype/index.html`, `prototype/app-projects.html` — DOM source of truth
 - `prototype/styles.css` — visual source of truth
-- `src_v2/app/page.tsx` — new
-- `src_v2/app/projects/page.tsx` — new
-- `src_v2/components/welcome/*` — new folder
-- `src_v2/components/projects/*` — new folder
-- `src_v2/hooks/useProcessedProjects.ts` — copied from `src/` in PLAN-003
-- `src_v2/hooks/useConversationHistory.ts` — introduced in PLAN-003
-- `src_v2/utils/urlDecoder.tsx` — copied from `src/` in PLAN-003
+- `src/app/page.tsx` — new
+- `src/app/projects/page.tsx` — new
+- `src/components/welcome/*` — new folder
+- `src/components/projects/*` — new folder
+- `src/hooks/useProcessedProjects.ts` — copied from `src_old/` in PLAN-003
+- `src/hooks/useConversationHistory.ts` — introduced in PLAN-003
+- `src/utils/urlDecoder.tsx` — copied from `src_old/` in PLAN-003
 - `docs/api/frontend-backend-apis.md` §4.5, §4.6 — backend contract for projects list/delete
 
 ## Verification
 
 In addition to the PLAN-002 shared harness:
 
-1. `src_v2/` `/` renders the hero centered at 1440×900 with the subtitle, the scratch input, and the 2×2 example grid. Compare against `prototype/index.html` in a second tab.
+1. `src/` `/` renders the hero centered at 1440×900 with the subtitle, the scratch input, and the 2×2 example grid. Compare against `prototype/index.html` in a second tab.
 2. Typing a valid GitHub URL into the scratch input and pressing `↵` navigates to `/[owner]/[repo]?status=generating`.
 3. Clicking an example card navigates to the right target (chat vs wiki — matching the prototype links).
 4. `/projects` lists the contents of `~/.adalflow/wikicache/`. Deleting one project in the UI removes the corresponding cache file on disk (verify with `ls ~/.adalflow/wikicache/` on the backend host).
 5. Switching `Grid` / `List` in the projects toolbar re-renders the card grid; `localStorage.opswiki.projectsView` persists the choice across reloads.
 6. The alpha rail anchors navigate to the correct letter groups. The active letter (as the user scrolls) is highlighted — implement with an `IntersectionObserver` on the group headings.
-7. `grep -r "from.*src/" src_v2/` returns no hits — no cross-directory imports.
+7. `grep -r "from.*src_old/" src/` returns no hits — no cross-directory imports.
 
 ## Risks
 

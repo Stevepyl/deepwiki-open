@@ -19,9 +19,9 @@
     "plan_status": "proposed",
     "implementation_status": "in-progress",
     "evidence": [
-      "PLAN-003 is implemented in src_v2.",
+      "PLAN-003 is implemented in src.",
       "PLAN-004 through PLAN-006 remain not-started.",
-      "The legacy src/ frontend remains untouched per the overview non-goal."
+      "The legacy src_old/ frontend remains untouched per the overview non-goal."
     ],
     "sub_tasks": []
   },
@@ -33,28 +33,28 @@
     "implementation_status": "implemented",
     "evidence": [
       "Plan frontmatter declares status: implemented.",
-      "src_v2/app/globals.css contains the Paper and Ink token set, shell/composer styles, SettingsPanel styles, markdown styles, and the 1100px wiki responsive guard.",
-      "src_v2/app/layout.tsx mounts LanguageProvider and SettingsProvider without ThemeProvider.",
-      "src_v2/components/shell/ contains AppShell, Sidebar, Topbar, Composer, Wordmark, SettingsPanel, IconButton, Switcher, Eyebrow, and DayDivider.",
-      "src_v2/messages/en.ts centralizes shell copy while LanguageContext plumbing remains mounted.",
-      "Shared renderers, utility connectors, hook, context, types, and the agent-stream route are copied into src_v2 with self-contained imports.",
+      "src/app/globals.css contains only Tailwind imports, the Paper and Ink token set, and base element defaults.",
+      "src/app/layout.tsx mounts LanguageProvider and SettingsProvider without ThemeProvider.",
+      "src/components/shell/ contains Tailwind-first AppShell, Sidebar, Topbar, Composer, Wordmark, SettingsPanel, IconButton, Switcher, Eyebrow, and DayDivider.",
+      "src/messages/en.ts centralizes shell copy while LanguageContext plumbing remains mounted.",
+      "Shared renderers, utility connectors, hook, context, types, and the agent-stream route are copied into src with self-contained imports.",
       "bun run lint and bun run build pass with existing warnings only."
     ],
     "sub_tasks": [
       {
         "name": "Token rewrite of globals.css",
         "status": "implemented",
-        "notes": "src_v2/app/globals.css registers Paper and Ink tokens, global defaults, wordmark styles, shell/composer chrome, markdown styles, and the 1100px responsive guard."
+        "notes": "src/app/globals.css registers Paper and Ink tokens plus base element defaults only; wordmark, shell/composer chrome, SettingsPanel chrome, and markdown styles now live in Tailwind utility classes inside src components."
       },
       {
-        "name": "Build shared shell components under src_v2/components/shell/",
+        "name": "Build shared shell components under src/components/shell/",
         "status": "implemented",
         "notes": "Includes AppShell, Sidebar, Topbar, Composer, Wordmark, SettingsPanel, IconButton, Switcher, Eyebrow, and DayDivider."
       },
       {
-        "name": "Copy shared legacy chat and agent-chat connector files into src_v2",
+        "name": "Copy shared legacy chat and agent-chat connector files into src",
         "status": "implemented",
-        "notes": "Preserves createChatWebSocket, createAgentChatWebSocket, streamAgentChatHttp, and agentChat types with self-contained src_v2 imports."
+        "notes": "Preserves createChatWebSocket, createAgentChatWebSocket, streamAgentChatHttp, and agentChat types with self-contained src imports."
       },
       {
         "name": "Introduce SettingsContext and useConversationHistory",
@@ -62,9 +62,9 @@
         "notes": "SettingsContext persists opswiki.* settings; useConversationHistory powers the sidebar tree and removes stale deepwiki.* keys on read."
       },
       {
-        "name": "Preserve legacy src/ while adding src_v2 foundation",
+        "name": "Preserve legacy src_old/ while adding src foundation",
         "status": "implemented",
-        "notes": "Existing src/ pages and components are untouched, matching PLAN-002 and PLAN-003 scope."
+        "notes": "Existing src_old/ pages and components are untouched, matching PLAN-002 and PLAN-003 scope."
       }
     ]
   },
@@ -76,19 +76,19 @@
     "implementation_status": "not-started",
     "evidence": [
       "Plan frontmatter declares status: proposed.",
-      "src/app/page.tsx is 627 lines rendering the current home.",
-      "src/app/wiki/projects/page.tsx is the active projects route.",
-      "src/app/projects/ does not exist.",
+      "src_old/app/page.tsx is 627 lines rendering the current home.",
+      "src_old/app/wiki/projects/page.tsx is the active projects route.",
+      "src_old/app/projects/ does not exist.",
       "Plan now carries a Tailwind-first styling rule aligned with PLAN-005 and PLAN-006."
     ],
     "sub_tasks": [
       {
-        "name": "Rewrite src/app/page.tsx welcome route",
+        "name": "Rewrite src_old/app/page.tsx welcome route",
         "status": "not-started",
         "notes": "Under 120 lines target."
       },
       {
-        "name": "Create src/app/projects/page.tsx and delete src/app/wiki/projects/",
+        "name": "Create src_old/app/projects/page.tsx and delete src_old/app/wiki/projects/",
         "status": "not-started",
         "notes": "New /projects URL per PLAN-002 D8."
       }
@@ -102,18 +102,18 @@
     "implementation_status": "not-started",
     "evidence": [
       "Plan frontmatter declares status: proposed.",
-      "src/app/[owner]/[repo]/ask/page.tsx (583 lines) still uses AskComposer and AskResultView.",
+      "src_old/app/[owner]/[repo]/ask/page.tsx (583 lines) still uses AskComposer and AskResultView.",
       "PLAN-007 connector files exist for the rewrite.",
       "Plan now carries a Tailwind-first styling rule aligned with PLAN-004 and PLAN-006."
     ],
     "sub_tasks": [
       {
-        "name": "Rewrite src/app/[owner]/[repo]/ask/page.tsx",
+        "name": "Rewrite src_old/app/[owner]/[repo]/ask/page.tsx",
         "status": "not-started",
         "notes": "Under 200 lines target; use AgentChatRequest with default agent_name: explore."
       },
       {
-        "name": "Build ChatStream, Message, Citation, and ToolEvent under src_v2/components/chat/",
+        "name": "Build ChatStream, Message, Citation, and ToolEvent under src/components/chat/",
         "status": "not-started",
         "notes": "Reuses Markdown component and renders structured tool_call_start / tool_call_end events."
       },
@@ -132,25 +132,25 @@
     "implementation_status": "not-started",
     "evidence": [
       "Plan frontmatter declares status: proposed.",
-      "src/app/[owner]/[repo]/page.tsx is 2267 lines.",
-      "src/components/WikiTreeView.tsx is still the TOC.",
-      "No src/components/generation/ folder exists.",
+      "src_old/app/[owner]/[repo]/page.tsx is 2267 lines.",
+      "src_old/components/WikiTreeView.tsx is still the TOC.",
+      "No src_old/components/generation/ folder exists.",
       "Plan text keeps wiki-family generation on raw-text /ws/chat rather than agent-chat events.",
       "Plan now carries a Tailwind-first styling rule aligned with PLAN-004 and PLAN-005."
     ],
     "sub_tasks": [
       {
-        "name": "Rewrite src/app/[owner]/[repo]/page.tsx wiki route",
+        "name": "Rewrite src_old/app/[owner]/[repo]/page.tsx wiki route",
         "status": "not-started",
         "notes": "Under 250 lines target."
       },
       {
-        "name": "Rewrite src/app/[owner]/[repo]/workshop/page.tsx",
+        "name": "Rewrite src_old/app/[owner]/[repo]/workshop/page.tsx",
         "status": "not-started",
         "notes": "Under 200 lines target."
       },
       {
-        "name": "Rewrite src/app/[owner]/[repo]/slides/page.tsx",
+        "name": "Rewrite src_old/app/[owner]/[repo]/slides/page.tsx",
         "status": "not-started",
         "notes": "Under 200 lines target."
       },
@@ -171,7 +171,7 @@
       "Plan frontmatter declares status: implemented.",
       "api/agent/chat_handler.py implements AgentChatRequest, _run_agent_chat, WebSocket, HTTP NDJSON, and agent info handlers.",
       "/ws/agent-chat, /chat/agent-stream, and /agent/info are registered in api/api.py.",
-      "src/types/agentChat.ts, src/utils/agentChatStream.ts, and src/app/api/chat/agent-stream/route.ts exist."
+      "src_old/types/agentChat.ts, src_old/utils/agentChatStream.ts, and src_old/app/api/chat/agent-stream/route.ts exist."
     ],
     "sub_tasks": [
       {
@@ -205,22 +205,22 @@
         "notes": "tests/api/test_agent_chat_websocket.py and tests/api/test_agent_chat_stream.py cover happy and error paths."
       },
       {
-        "name": "Frontend types src/types/agentChat.ts",
+        "name": "Frontend types src_old/types/agentChat.ts",
         "status": "implemented",
         "notes": "Discriminated union covers chat-relevant agent events and request payloads."
       },
       {
-        "name": "Extend src/utils/websocketClient.ts with createAgentChatWebSocket",
+        "name": "Extend src_old/utils/websocketClient.ts with createAgentChatWebSocket",
         "status": "implemented",
         "notes": "Uses structured onEvent callback against /ws/agent-chat."
       },
       {
-        "name": "Frontend HTTP connector src/utils/agentChatStream.ts",
+        "name": "Frontend HTTP connector src_old/utils/agentChatStream.ts",
         "status": "implemented",
         "notes": "Reads line-buffered NDJSON from /api/chat/agent-stream."
       },
       {
-        "name": "Frontend Next.js proxy src/app/api/chat/agent-stream/route.ts",
+        "name": "Frontend Next.js proxy src_old/app/api/chat/agent-stream/route.ts",
         "status": "implemented",
         "notes": "Proxies to backend /chat/agent-stream with Accept: application/x-ndjson."
       }

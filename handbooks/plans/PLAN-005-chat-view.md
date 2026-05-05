@@ -12,11 +12,11 @@ status: proposed
 
 ## Context
 
-The current chat surface is `src/app/[owner]/[repo]/ask/page.tsx` (583 lines) plus `src/components/AskComposer.tsx` and `src/components/AskResultView.tsx`. It implements a single-question-plus-answer model with deep-research toggle and iteration traces.
+The current chat surface is `src_old/app/[owner]/[repo]/ask/page.tsx` (583 lines) plus `src_old/components/AskComposer.tsx` and `src_old/components/AskResultView.tsx`. It implements a single-question-plus-answer model with deep-research toggle and iteration traces.
 
 The prototype reframes this as a conversation: alternating user and AI messages, citations as pill badges, day dividers between sessions, a floating composer that shares the shell with the wiki view. The interaction model moves from "ask once, render once" to "multi-turn with local history".
 
-Backend protocol is already extended by PLAN-007. The current `src/` Ask page still uses legacy `WebSocket /ws/chat` plus `POST /api/chat/stream` raw-text fallback, but the `src_v2` Ask rewrite should use structured agent chat:
+Backend protocol is already extended by PLAN-007. The current `src_old/` Ask page still uses legacy `WebSocket /ws/chat` plus `POST /api/chat/stream` raw-text fallback, but the `src` Ask rewrite should use structured agent chat:
 
 - Primary transport: `createAgentChatWebSocket()` → direct `WebSocket /ws/agent-chat`.
 - HTTP fallback: `streamAgentChatHttp()` → same-origin `POST /api/chat/agent-stream` → backend `POST /chat/agent-stream`.
@@ -25,11 +25,11 @@ Backend protocol is already extended by PLAN-007. The current `src/` Ask page st
 
 Use `agent_name: "explore"` by default. Map the deep-research mode to `agent_name: "deep-research"` instead of the old `[DEEP RESEARCH]` prompt tag. The `wiki` agent remains available as an explicit advanced option, not the default chat mode.
 
-All new code is written to `src_v2/`. The existing `src/` is left untouched.
+All new code is written to `src/`. The existing `src_old/` is left untouched.
 
 ## Styling rule — Tailwind-first
 
-Write all new markup with Tailwind utility classes referencing the Paper and Ink tokens registered by PLAN-003's `@theme` block in `src_v2/app/globals.css`. Example: `className="bg-[var(--paper)] text-[var(--ink-primary)] max-w-[760px] mx-auto"`.
+Write all new markup with Tailwind utility classes referencing the Paper and Ink tokens registered by PLAN-003's `@theme` block in `src/app/globals.css`. Example: `className="bg-[var(--paper)] text-[var(--ink-primary)] max-w-[760px] mx-auto"`.
 
 Fall back to prototype CSS class names (e.g. `.chat-stream`, `.message`, `.citation`, `.tool-event`) only when Tailwind cannot express the rule cleanly — paper-grain pseudo-elements, multi-line citation pill layouts, or the running-tool shimmer animation. When you do fall back, colocate the rule in `globals.css` under a clearly labeled section; do not create per-component CSS files.
 
@@ -37,7 +37,7 @@ Never introduce new dark-mode selectors or `data-theme` branches. Tokens drive t
 
 ## Target file
 
-`src_v2/app/[owner]/[repo]/ask/page.tsx` — new file, target under 200 lines.
+`src/app/[owner]/[repo]/ask/page.tsx` — new file, target under 200 lines.
 
 ## Route parameters
 
@@ -61,10 +61,10 @@ Never introduce new dark-mode selectors or `data-theme` branches. Tokens drive t
 
 ## Components to build
 
-- `src_v2/components/chat/ChatStream.tsx` (~80 lines) — renders the ordered list of messages with day dividers. Pure view; no state.
-- `src_v2/components/chat/Message.tsx` (~60 lines) — one message bubble. Props: `role`, `content`, `timestamp`, `model?`, `citations?`. Uses `<Markdown>` from `src_v2/components/Markdown.tsx` to render `content`.
-- `src_v2/components/chat/Citation.tsx` (~20 lines) — pill-shaped citation link. Hover reveals the file path.
-- `src_v2/components/chat/ToolEvent.tsx` (~60 lines) — compact running/completed/error row for `tool_call_start` and `tool_call_end` events. Collapsed by default; shows tool name, duration, error state, and result summary.
+- `src/components/chat/ChatStream.tsx` (~80 lines) — renders the ordered list of messages with day dividers. Pure view; no state.
+- `src/components/chat/Message.tsx` (~60 lines) — one message bubble. Props: `role`, `content`, `timestamp`, `model?`, `citations?`. Uses `<Markdown>` from `src/components/Markdown.tsx` to render `content`.
+- `src/components/chat/Citation.tsx` (~20 lines) — pill-shaped citation link. Hover reveals the file path.
+- `src/components/chat/ToolEvent.tsx` (~60 lines) — compact running/completed/error row for `tool_call_start` and `tool_call_end` events. Collapsed by default; shows tool name, duration, error state, and result summary.
 
 ## State management
 
@@ -72,12 +72,12 @@ State lives in the page component via `useState` + `useEffect`. No Redux/Zustand
 
 1. User hits `↵` in `<Composer>`.
 2. Page constructs an `AgentChatRequest` from:
-   - `repo_url` — computed with `getRepoUrl(repoInfo)` from `src_v2/utils/getRepoUrl.tsx`.
+   - `repo_url` — computed with `getRepoUrl(repoInfo)` from `src/utils/getRepoUrl.tsx`.
    - `messages` — all prior turns plus the new user message.
-   - `provider`, `model`, `token`, `excluded_*`, `included_*` — from `useSettings()` (PLAN-003 `src_v2/contexts/SettingsContext.tsx`).
+   - `provider`, `model`, `token`, `excluded_*`, `included_*` — from `useSettings()` (PLAN-003 `src/contexts/SettingsContext.tsx`).
    - `language` — from `LanguageContext` (not user-toggleable in v1; defaults to "en").
    - `agent_name` — `"explore"` by default; `"deep-research"` when the user enables deep research.
-3. Opens a socket via `createAgentChatWebSocket()` from `src_v2/utils/websocketClient.ts` (copied in PLAN-003).
+3. Opens a socket via `createAgentChatWebSocket()` from `src/utils/websocketClient.ts` (copied in PLAN-003).
 4. Appends an empty AI message with `streaming: true`. As `AgentChatEvent` objects arrive:
    - `text_delta`: append `content` to the assistant message.
    - `tool_call_start`: append or update a running tool event keyed by `tool_call_id`.
@@ -95,7 +95,7 @@ State lives in the page component via `useState` + `useEffect`. No Redux/Zustand
 Citations in the prototype look like:
 
 ```
-<span class="citation"><span class="citation__num">1</span>src/hooks/pretool.ts:42</span>
+<span class="citation"><span class="citation__num">1</span>src_old/hooks/pretool.ts:42</span>
 ```
 
 The backend does not emit these as structured data. For v1, parse citations from a trailing `\n\nSources:\n- path/to/file:line\n- ...` block if present. If the model does not emit that block, render no citations. A prompt-template change to reliably elicit the block is out of scope here.
@@ -124,21 +124,21 @@ Quota guard: if `localStorage` is >4MB, evict oldest conversations before writin
 
 ## Components to delete after this plan
 
-None — `src/` is left untouched. `src/components/AskComposer.tsx` and `src/components/AskResultView.tsx` remain in `src/` as-is.
+None — `src_old/` is left untouched. `src_old/components/AskComposer.tsx` and `src_old/components/AskResultView.tsx` remain in `src_old/` as-is.
 
 ## Critical files referenced or modified
 
 - `prototype/app-chat.html` — DOM source of truth
 - `prototype/styles.css:727-890` — chat-stream styles
-- `src_v2/app/[owner]/[repo]/ask/page.tsx` — new
-- `src_v2/components/chat/*` — new folder
-- `src_v2/components/Markdown.tsx` — copied from `src/` in PLAN-003
-- `src_v2/utils/websocketClient.ts` — copied from `src/` in PLAN-003
-- `src_v2/utils/agentChatStream.ts` — copied from `src/` in PLAN-003
-- `src_v2/types/agentChat.ts` — copied from `src/` in PLAN-003
-- `src_v2/utils/getRepoUrl.tsx` — copied from `src/` in PLAN-003
-- `src_v2/hooks/useConversationHistory.ts` — introduced in PLAN-003
-- `src_v2/contexts/SettingsContext.tsx` — introduced in PLAN-003
+- `src/app/[owner]/[repo]/ask/page.tsx` — new
+- `src/components/chat/*` — new folder
+- `src/components/Markdown.tsx` — copied from `src_old/` in PLAN-003
+- `src/utils/websocketClient.ts` — copied from `src_old/` in PLAN-003
+- `src/utils/agentChatStream.ts` — copied from `src_old/` in PLAN-003
+- `src/types/agentChat.ts` — copied from `src_old/` in PLAN-003
+- `src/utils/getRepoUrl.tsx` — copied from `src_old/` in PLAN-003
+- `src/hooks/useConversationHistory.ts` — introduced in PLAN-003
+- `src/contexts/SettingsContext.tsx` — introduced in PLAN-003
 - `docs/api/frontend-backend-apis.md` §5.3 (`/ws/agent-chat`), §5.4 (`/api/chat/agent-stream` fallback) — primary Ask rewrite contract
 - `handbooks/plans/PLAN-007-agent-chat-api.md` — implemented backend and connector plan
 
@@ -146,7 +146,7 @@ None — `src/` is left untouched. `src/components/AskComposer.tsx` and `src/com
 
 In addition to the PLAN-002 shared harness:
 
-1. Open `src_v2/` `/[owner]/[repo]/ask` on a cached repository. Ask a question. The AI message populates token-by-token from `text_delta` events.
+1. Open `src/` `/[owner]/[repo]/ask` on a cached repository. Ask a question. The AI message populates token-by-token from `text_delta` events.
 2. Refresh the page with the same `?convId`. The prior messages re-render from `localStorage`.
 3. Open DevTools → Network → WS frame inspector. Confirm the payload matches `AgentChatRequest`, includes `agent_name`, and contains the full `messages` history, not just the latest question.
 4. Mock or trigger one `tool_call_start` / `tool_call_end` pair. The tool event appears in the message timeline, transitions from running to complete/error, and does not pollute the assistant markdown body.
@@ -155,7 +155,7 @@ In addition to the PLAN-002 shared harness:
 7. The sidebar `<ProjectTree>` in `<AppShell>` updates immediately when a new conversation is started (shared hook, not a page-local store).
 8. A question with `?q=explain+hooks` in the URL auto-submits on mount.
 9. Visual parity with `prototype/app-chat.html` at 1440×900.
-10. `grep -r "from.*src/" src_v2/` returns no hits.
+10. `grep -r "from.*src_old/" src/` returns no hits.
 
 ## Risks
 

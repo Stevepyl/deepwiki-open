@@ -14,20 +14,20 @@ status: proposed
 
 The "wiki family" is the bulk of the app. Today:
 
-- `src/app/[owner]/[repo]/page.tsx` (2,267 lines) hosts wiki generation, cache, sidebar tree, composer, model selection, and export.
-- `src/app/[owner]/[repo]/workshop/page.tsx` (634 lines) renders a single long-form workshop.
-- `src/app/[owner]/[repo]/slides/page.tsx` (1,300 lines) renders wiki content as slides.
+- `src_old/app/[owner]/[repo]/page.tsx` (2,267 lines) hosts wiki generation, cache, sidebar tree, composer, model selection, and export.
+- `src_old/app/[owner]/[repo]/workshop/page.tsx` (634 lines) renders a single long-form workshop.
+- `src_old/app/[owner]/[repo]/slides/page.tsx` (1,300 lines) renders wiki content as slides.
 - There is no dedicated loading screen; the wiki page shows inline spinners while streaming.
 
 The prototype introduces four distinct surfaces for these: `app-wiki.html`, `app-workshop.html`, `app-slides.html`, `app-loading.html`. All share the same app shell except slides (chrome-minimal) and loading (full-screen without sidebar).
 
-All new code is written to `src_v2/`. The existing `src/` files are left untouched. This plan groups the wiki family because they share data sources (`GET /api/wiki_cache`, `WebSocket /ws/chat`) and the cached `WikiStructure` from `src_v2/types/wiki/` (copied from `src/` in PLAN-003).
+All new code is written to `src/`. The existing `src_old/` files are left untouched. This plan groups the wiki family because they share data sources (`GET /api/wiki_cache`, `WebSocket /ws/chat`) and the cached `WikiStructure` from `src/types/wiki/` (copied from `src_old/` in PLAN-003).
 
 PLAN-007 added structured agent chat connectors for PLAN-005. This wiki-family plan does not switch wiki/workshop/slides generation to agent chat. Keep using the legacy raw-text `/ws/chat` generation path unless a later plan explicitly migrates these routes to `/ws/agent-wiki`.
 
 ## Styling rule — Tailwind-first
 
-Write all new markup across wiki, workshop, slides, and generation-loader components with Tailwind utility classes referencing the Paper and Ink tokens registered by PLAN-003's `@theme` block in `src_v2/app/globals.css`. Example: `className="grid grid-cols-[240px_1fr] gap-6 text-[var(--ink-primary)]"`.
+Write all new markup across wiki, workshop, slides, and generation-loader components with Tailwind utility classes referencing the Paper and Ink tokens registered by PLAN-003's `@theme` block in `src/app/globals.css`. Example: `className="grid grid-cols-[240px_1fr] gap-6 text-[var(--ink-primary)]"`.
 
 Fall back to prototype CSS class names (e.g. `.wiki-toc`, `.wiki-article`, `.workshop-exercise`, `.slide-card`, `.log-line`, `.hairline-progress`) only when Tailwind cannot express the rule cleanly — paper-panel backgrounds, hairline borders with gradient, slide-stage perspective transforms, Mermaid sizing overrides, or the log auto-scroll animation. When you do fall back, colocate the rule in `globals.css` under a clearly labeled section; do not create per-component CSS files.
 
@@ -37,13 +37,13 @@ Never introduce new dark-mode selectors or `data-theme` branches. Tokens drive t
 
 - All three interactive routes (wiki, workshop, slides) first call `GET /api/wiki_cache`. If a cache exists, render immediately. If not, redirect to `/[owner]/[repo]?status=generating` — which mounts the loading screen and triggers generation.
 - Generation itself uses `WebSocket /ws/chat` following the structure-then-pages pattern described in `docs/api/frontend-backend-apis.md` §6.2. On completion, `POST /api/wiki_cache` persists the result. Do not parse `/ws/chat` as `AgentChatEvent`; it streams raw text.
-- All three routes read the cached `WikiStructure` shape (see `docs/api/frontend-backend-apis.md` §3). Types are defined in `src_v2/types/wiki/wikistructure.tsx` and `src_v2/types/wiki/wikipage.tsx` (copied from `src/` in PLAN-003).
+- All three routes read the cached `WikiStructure` shape (see `docs/api/frontend-backend-apis.md` §3). Types are defined in `src/types/wiki/wikistructure.tsx` and `src/types/wiki/wikipage.tsx` (copied from `src_old/` in PLAN-003).
 
 ## Sub-route 1 — Wiki reading view
 
 ### Target file
 
-`src_v2/app/[owner]/[repo]/page.tsx` — new file, target under 250 lines. Implements the `app-wiki.html` layout.
+`src/app/[owner]/[repo]/page.tsx` — new file, target under 250 lines. Implements the `app-wiki.html` layout.
 
 ### Structure
 
@@ -55,8 +55,8 @@ Never introduce new dark-mode selectors or `data-theme` branches. Tokens drive t
 
 ### Components to build
 
-- `src_v2/components/wiki/WikiToc.tsx` (~90 lines) — new, matching prototype. Consumes `WikiStructure.sections` and nested pages. Active state from route search param `?page=<id>`.
-- `src_v2/components/wiki/WikiArticle.tsx` (~120 lines) — eyebrow, h1, italic lede (first sentence of page content), metadata row (Module / Entry / Updated / Confidence), then `<Markdown>` for the body. Mermaid blocks render via `src_v2/components/Mermaid.tsx` (copied in PLAN-003).
+- `src/components/wiki/WikiToc.tsx` (~90 lines) — new, matching prototype. Consumes `WikiStructure.sections` and nested pages. Active state from route search param `?page=<id>`.
+- `src/components/wiki/WikiArticle.tsx` (~120 lines) — eyebrow, h1, italic lede (first sentence of page content), metadata row (Module / Entry / Updated / Confidence), then `<Markdown>` for the body. Mermaid blocks render via `src/components/Mermaid.tsx` (copied in PLAN-003).
 
 ### Data
 
@@ -72,7 +72,7 @@ Never introduce new dark-mode selectors or `data-theme` branches. Tokens drive t
 
 ### Target file
 
-`src_v2/app/[owner]/[repo]/workshop/page.tsx` — new file, target under 200 lines. Implements `app-workshop.html`.
+`src/app/[owner]/[repo]/workshop/page.tsx` — new file, target under 200 lines. Implements `app-workshop.html`.
 
 ### Structure
 
@@ -83,9 +83,9 @@ Never introduce new dark-mode selectors or `data-theme` branches. Tokens drive t
 
 ### Components to build
 
-- `src_v2/components/workshop/WorkshopRail.tsx` (~60 lines).
-- `src_v2/components/workshop/WorkshopArticle.tsx` (~80 lines).
-- `src_v2/components/workshop/ExerciseBlock.tsx` (~25 lines) — paper-panel with left rust border, "Try it" label, task body, and italic hint.
+- `src/components/workshop/WorkshopRail.tsx` (~60 lines).
+- `src/components/workshop/WorkshopArticle.tsx` (~80 lines).
+- `src/components/workshop/ExerciseBlock.tsx` (~25 lines) — paper-panel with left rust border, "Try it" label, task body, and italic hint.
 
 ### Data
 
@@ -96,7 +96,7 @@ Never introduce new dark-mode selectors or `data-theme` branches. Tokens drive t
 
 ### Target file
 
-`src_v2/app/[owner]/[repo]/slides/page.tsx` — new file, target under 200 lines. Implements `app-slides.html`.
+`src/app/[owner]/[repo]/slides/page.tsx` — new file, target under 200 lines. Implements `app-slides.html`.
 
 ### Structure
 
@@ -108,27 +108,27 @@ Never introduce new dark-mode selectors or `data-theme` branches. Tokens drive t
 
 ### Components to build
 
-- `src_v2/components/slides/SlideStage.tsx` (~80 lines).
-- `src_v2/components/slides/SlideCard.tsx` (~60 lines) — variant `"divider" | "content" | "diagram"`.
-- `src_v2/components/slides/SlideNav.tsx` (~50 lines).
+- `src/components/slides/SlideStage.tsx` (~80 lines).
+- `src/components/slides/SlideCard.tsx` (~60 lines) — variant `"divider" | "content" | "diagram"`.
+- `src/components/slides/SlideNav.tsx` (~50 lines).
 
 ### Data
 
 - Slides derive from the wiki cache: one slide per page, plus a `divider` card per section.
 - Generation path matches existing behavior (`/ws/chat` streaming plan-then-slides). Cache HTML per slide in `localStorage.opswiki.slides.${repoKey}.${language}`.
-- The rendered slide bodies use `<Markdown>` from `src_v2/components/Markdown.tsx` (copied in PLAN-003) — no custom code-highlight tokens.
+- The rendered slide bodies use `<Markdown>` from `src/components/Markdown.tsx` (copied in PLAN-003) — no custom code-highlight tokens.
 
 ## Sub-route 4 — Generation loading screen
 
 ### Target file
 
-`src_v2/app/[owner]/[repo]/page.tsx` also handles `?status=generating`. When that query param is set, render `<GenerationLoader>` instead of the wiki content. Alternatively (simpler), introduce a dedicated `src_v2/components/generation/GenerationLoader.tsx` component and let the wiki page gate its render.
+`src/app/[owner]/[repo]/page.tsx` also handles `?status=generating`. When that query param is set, render `<GenerationLoader>` instead of the wiki content. Alternatively (simpler), introduce a dedicated `src/components/generation/GenerationLoader.tsx` component and let the wiki page gate its render.
 
 The dedicated-component approach is preferred: the wiki page stays small; the loader is self-contained.
 
 ### Component
 
-`src_v2/components/generation/GenerationLoader.tsx` — new, target under 150 lines. Implements `app-loading.html`.
+`src/components/generation/GenerationLoader.tsx` — new, target under 150 lines. Implements `app-loading.html`.
 
 Renders:
 
@@ -153,26 +153,26 @@ Renders:
 
 ### Components to build
 
-- `src_v2/components/generation/GenerationLoader.tsx`.
-- `src_v2/components/generation/PhasePipeline.tsx` (~40 lines).
-- `src_v2/components/generation/LogPanel.tsx` (~60 lines).
-- `src_v2/hooks/useGenerationPhases.ts` (~80 lines).
+- `src/components/generation/GenerationLoader.tsx`.
+- `src/components/generation/PhasePipeline.tsx` (~40 lines).
+- `src/components/generation/LogPanel.tsx` (~60 lines).
+- `src/hooks/useGenerationPhases.ts` (~80 lines).
 
 ## Components to delete after this plan
 
-None — `src/` is left untouched. `src/components/WikiTreeView.tsx` and any inline loading spinners remain in `src/` as-is.
+None — `src_old/` is left untouched. `src_old/components/WikiTreeView.tsx` and any inline loading spinners remain in `src_old/` as-is.
 
 ## Critical files referenced or modified
 
 - `prototype/app-wiki.html`, `prototype/app-workshop.html`, `prototype/app-slides.html`, `prototype/app-loading.html` — DOM sources
 - `prototype/styles.css:892-1358` — layout and composer styles
-- `src_v2/app/[owner]/[repo]/page.tsx` — new
-- `src_v2/app/[owner]/[repo]/workshop/page.tsx` — new
-- `src_v2/app/[owner]/[repo]/slides/page.tsx` — new
-- `src_v2/components/wiki/*`, `src_v2/components/workshop/*`, `src_v2/components/slides/*`, `src_v2/components/generation/*` — new
-- `src_v2/components/Markdown.tsx`, `src_v2/components/Mermaid.tsx` — copied from `src/` in PLAN-003
-- `src_v2/utils/websocketClient.ts` — copied from `src/` in PLAN-003; use `createChatWebSocket` for wiki-family raw text generation, not `createAgentChatWebSocket`
-- `src_v2/hooks/useGenerationPhases.ts` — new
+- `src/app/[owner]/[repo]/page.tsx` — new
+- `src/app/[owner]/[repo]/workshop/page.tsx` — new
+- `src/app/[owner]/[repo]/slides/page.tsx` — new
+- `src/components/wiki/*`, `src/components/workshop/*`, `src/components/slides/*`, `src/components/generation/*` — new
+- `src/components/Markdown.tsx`, `src/components/Mermaid.tsx` — copied from `src_old/` in PLAN-003
+- `src/utils/websocketClient.ts` — copied from `src_old/` in PLAN-003; use `createChatWebSocket` for wiki-family raw text generation, not `createAgentChatWebSocket`
+- `src/hooks/useGenerationPhases.ts` — new
 - `docs/api/frontend-backend-apis.md` §4.7, §4.8, §4.9, §4.10, §5.1, §5.3, §6.2, §6.4 — contract boundaries; §5.3 is documented to avoid confusing agent chat with wiki generation
 
 ## Verification
@@ -189,7 +189,7 @@ In addition to the PLAN-002 shared harness:
 8. The "Present as slides" icon in the topbar links to `/[owner]/[repo]/slides`.
 9. Export via the topbar menu downloads a `.md` or `.json` file matching `docs/api/frontend-backend-apis.md` §4.10.
 10. Resize to 1100px: wiki TOC collapses (responsive guard from `prototype/styles.css:1350-1358`).
-11. `grep -r "from.*src/" src_v2/` returns no hits — no cross-directory imports.
+11. `grep -r "from.*src_old/" src/` returns no hits — no cross-directory imports.
 
 ## Risks
 
