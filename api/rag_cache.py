@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import gc
 import logging
 import os
 import re
@@ -139,6 +140,15 @@ def _evict_lru_locked() -> None:
         logger.info("Evicting LRU RAG cache entry: %s", evicted_key)
 
 
+def _evict_lru_for_new_entry_locked() -> int:
+    evicted_count = 0
+    while len(_cache) >= _max_entries():
+        evicted_key, _ = _cache.popitem(last=False)
+        evicted_count += 1
+        logger.info("Evicting LRU RAG cache entry before building new entry: %s", evicted_key)
+    return evicted_count
+
+
 def _get_cached_entry(key: str, now: float) -> _CacheEntry | None:
     with _cache_lock:
         _evict_expired_locked(now)
@@ -254,6 +264,12 @@ def get_prepared_rag(
                 prepare_latency_sec=round(time.perf_counter() - started_at, 3),
                 cache_key=key,
             )
+
+        with _cache_lock:
+            _evict_expired_locked(time.monotonic())
+            evicted_count = _evict_lru_for_new_entry_locked()
+        if evicted_count:
+            gc.collect()
 
         logger.info("RAG cache miss for %s. Preparing retriever.", repo_url)
         rag = _prepare_uncached_rag(
