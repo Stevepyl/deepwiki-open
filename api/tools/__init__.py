@@ -21,6 +21,7 @@ from api.tools.bash import BashTool
 from api.tools.glob import GlobTool
 from api.tools.grep import GrepTool
 from api.tools.ls import ListTool
+from api.tools.rag import RagTool
 from api.tools.read import ReadTool
 from api.tools.task import AgentInfo, TaskTool
 from api.tools.todo import TodoTool
@@ -34,6 +35,7 @@ __all__ = [
     "GrepTool",
     "GlobTool",
     "ListTool",
+    "RagTool",
     "ReadTool",
     "TaskTool",
     "TodoTool",
@@ -48,6 +50,7 @@ _TOOL_CLASSES: dict[str, type[Tool]] = {
     "grep": GrepTool,
     "glob": GlobTool,
     "ls": ListTool,
+    "rag_search": RagTool,
     "read": ReadTool,
     "task": TaskTool,
     "todowrite": TodoTool,

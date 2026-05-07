@@ -204,7 +204,7 @@ FAKE_REPO = "/fake/repo"
 
 
 class TestGetToolsForAgent:
-    def test_read_only_config_returns_four_tools(self):
+    def test_read_only_config_returns_read_only_tools(self):
         config = AgentConfig(
             name="explore",
             description="read only",
@@ -213,9 +213,9 @@ class TestGetToolsForAgent:
             allowed_tools=_READ_ONLY_TOOLS,
         )
         tools = get_tools_for_agent(config, FAKE_REPO)
-        assert set(tools.keys()) == {"grep", "glob", "ls", "read"}
+        assert set(tools.keys()) == set(_READ_ONLY_TOOLS)
 
-    def test_all_tools_config_returns_seven_tools(self):
+    def test_all_tools_config_returns_all_registered_tools(self):
         config = AgentConfig(
             name="wiki",
             description="all tools",
@@ -225,7 +225,7 @@ class TestGetToolsForAgent:
         )
         tools = get_tools_for_agent(config, FAKE_REPO)
         assert set(tools.keys()) == set(_ALL_TOOLS)
-        assert len(tools) == 7
+        assert len(tools) == len(_ALL_TOOLS)
 
     def test_empty_allowed_tools_returns_empty_dict(self):
         config = AgentConfig(
@@ -244,15 +244,14 @@ class TestGetToolsForAgent:
             description="future tools",
             mode="subagent",
             system_prompt_template="prompt",
-            allowed_tools=("grep", "rag_search"),  # rag_search not yet registered
+            allowed_tools=("grep", "future_tool"),
         )
         with caplog.at_level(logging.WARNING, logger="api.agent.config"):
             tools = get_tools_for_agent(config, FAKE_REPO)
 
-        assert "rag_search" in tools or "rag_search" not in tools  # doesn't raise
-        assert "rag_search" not in tools
+        assert "future_tool" not in tools
         assert "grep" in tools
-        assert any("rag_search" in record.message for record in caplog.records)
+        assert any("future_tool" in record.message for record in caplog.records)
 
 
 # ---------------------------------------------------------------------------
@@ -336,6 +335,10 @@ class TestBuiltInAgents:
         assert config.mode == "primary"
         assert config.max_steps == 40
         assert set(config.allowed_tools) == set(_ALL_TOOLS)
+
+    def test_wiki_writer_has_rag_search(self):
+        config = get_agent_config("wiki-writer")
+        assert "rag_search" in config.allowed_tools
 
     def test_deep_research_has_higher_steps_than_wiki(self):
         assert get_agent_config("deep-research").max_steps > get_agent_config("wiki").max_steps

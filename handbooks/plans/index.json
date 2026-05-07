@@ -235,44 +235,47 @@
     "name": "RAG Retrieval as an Agent Tool",
     "number": "PLAN-008",
     "path": "PLAN-008-rag-tool.md",
-    "plan_status": "proposed",
-    "implementation_status": "not-started",
+    "plan_status": "implemented",
+    "implementation_status": "implemented",
     "evidence": [
-      "Plan frontmatter declares status: proposed.",
-      "api/retriever.py does not exist.",
-      "api/tools/rag.py does not exist.",
-      "_TOOL_CLASSES in api/tools/__init__.py does not register rag_search."
+      "Plan frontmatter declares status: implemented.",
+      "api/retriever.py implements CodeRetriever with DatabaseManager reuse, embedding validation, FAISSRetriever construction, and an LRU cache with per-key locks.",
+      "api/tools/rag.py and api/tools/rag.txt implement the rag_search Tool adapter and LLM-facing description.",
+      "api/tools/__init__.py registers RagTool as rag_search.",
+      "api/agent/config.py adds rag_search to _ALL_TOOLS, _READ_ONLY_TOOLS, and wiki-writer.",
+      "api/agent/filtered_tools.py post-filters rag_search markdown chunks by ParsedFilters.",
+      "Focused backend tests pass."
     ],
     "sub_tasks": [
       {
         "name": "Implement api/retriever.py (CodeRetriever, LRU cache with per-key lock)",
-        "status": "not-started",
-        "notes": "Pure retrieval component reusing DatabaseManager for the .pkl disk cache."
+        "status": "implemented",
+        "notes": "api/retriever.py reuses DatabaseManager.prepare_database, validates embeddings, builds FAISSRetriever, and caches per normalized repo path plus embedder type."
       },
       {
         "name": "Implement api/tools/rag.py and api/tools/rag.txt",
-        "status": "not-started",
-        "notes": "Thin Tool-ABC adapter calling get_or_build_retriever(repo_path)."
+        "status": "implemented",
+        "notes": "RagTool loads get_or_build_retriever(repo_path), clamps top_k, formats ranked file/line chunks, and documents semantic-search usage."
       },
       {
         "name": "Register rag_search in tool registry and agent configs",
-        "status": "not-started",
-        "notes": "Add to _TOOL_CLASSES, _ALL_TOOLS, and _READ_ONLY_TOOLS."
+        "status": "implemented",
+        "notes": "api/tools/__init__.py registers RagTool; api/agent/config.py adds rag_search to _ALL_TOOLS, _READ_ONLY_TOOLS, and wiki-writer."
       },
       {
         "name": "Post-filter rag_search results in FilteredToolWrapper",
-        "status": "not-started",
-        "notes": "Drop chunks whose meta_data.file_path is excluded by ParsedFilters."
+        "status": "implemented",
+        "notes": "api/agent/filtered_tools.py removes excluded markdown chunks from rag_search output and updates filter metadata."
       },
       {
         "name": "Add unit tests for retriever and tool",
-        "status": "not-started",
-        "notes": "tests/unit/test_retriever.py, tests/unit/test_rag_tool.py, tests/api/test_agent_chat_rag_tool.py."
+        "status": "implemented",
+        "notes": "Added tests/unit/test_retriever.py, tests/unit/test_rag_tool.py, and tests/api/test_agent_chat_rag_tool.py."
       },
       {
         "name": "Update handbooks indexes to list PLAN-008",
         "status": "implemented",
-        "notes": "Entries added to handbooks/plans/index.md, handbooks/plans/index.json, handbooks/index.md."
+        "notes": "PLAN-008 remains listed in handbooks/index.md and handbooks/index.json; implementation status is synced in this plans index and handbooks/plans/index.md."
       }
     ]
   }

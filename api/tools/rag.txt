@@ -1,0 +1,7 @@
+Search the repository semantically using the existing DeepWiki RAG index.
+
+Use this when a user asks where a behavior, concept, architecture decision, or code path is handled and keyword search may miss related code. It returns ranked chunks with file paths and line ranges when available.
+
+Use grep for exact symbols, strings, or error messages. Use read after rag_search when you need the full surrounding file context before answering.
+
+The index is loaded from the repository pickle cache and may not include files changed after that cache was built.

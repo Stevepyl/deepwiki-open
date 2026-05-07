@@ -37,8 +37,17 @@ logger = logging.getLogger(__name__)
 # Hardcoded rather than derived from _TOOL_CLASSES.keys() to avoid import-time
 # coupling. Mismatches are caught at runtime by get_tools_for_agent() (warning).
 # ---------------------------------------------------------------------------
-_ALL_TOOLS: tuple[str, ...] = ("bash", "grep", "glob", "ls", "read", "task", "todowrite")
-_READ_ONLY_TOOLS: tuple[str, ...] = ("grep", "glob", "ls", "read")
+_ALL_TOOLS: tuple[str, ...] = (
+    "bash",
+    "grep",
+    "glob",
+    "ls",
+    "rag_search",
+    "read",
+    "task",
+    "todowrite",
+)
+_READ_ONLY_TOOLS: tuple[str, ...] = ("grep", "glob", "ls", "rag_search", "read")
 
 
 # ---------------------------------------------------------------------------
@@ -112,8 +121,8 @@ def get_tools_for_agent(agent_config: AgentConfig, repo_path: str) -> dict[str, 
     """Return tool instances the agent is permitted to use.
 
     Skips tool names not yet registered in _TOOL_CLASSES (logs a warning).
-    This allows configs to reference future tools (e.g., "rag_search" before
-    subtask 5 registers it) without breaking at config load time.
+    This allows configs to reference future tools without breaking at config
+    load time.
 
     Note: the "task" tool is returned as a bare TaskTool instance without
     agents or an executor bound. The agent loop (subtask 4) is responsible
@@ -252,7 +261,7 @@ def _register_defaults() -> None:
         description="Writes a single wiki page using the codebase as ground truth (explore-then-write).",
         mode="primary",
         system_prompt_template=WIKI_WRITER_SYSTEM_PROMPT,
-        allowed_tools=("grep", "glob", "ls", "read", "bash"),
+        allowed_tools=("grep", "glob", "ls", "rag_search", "read", "bash"),
         max_steps=25,
     ))
 

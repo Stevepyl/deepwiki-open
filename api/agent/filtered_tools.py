@@ -20,6 +20,8 @@ Per-tool strategy
            format makes safe line-level filtering fragile).
   glob  — post-filter: output is one relative path per line; excluded paths
            are removed from the list before returning.
+  rag_search — post-filter: output is grouped into markdown chunks headed by
+           file path; excluded chunks are removed from the list before returning.
   bash  — pass-through; no reliable way to parse arbitrary shell commands.
            The BashTool sandbox gap is documented in
            handbooks/bash-agent-sandbox-gap.md.
@@ -32,6 +34,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from typing import Any
 
 from api.tools.tool import ToolResult
@@ -48,6 +51,8 @@ _PRE_CHECK_TOOLS: dict[str, str] = {
 
 # Tools whose text output is one relative path per line (post-filterable).
 _POST_FILTER_TOOLS: frozenset[str] = frozenset({"glob"})
+_RAG_HEADER_RE = re.compile(r"^###\s+\d+\.\s+(?P<loc>.+?)\s*$")
+_RAG_LINE_RANGE_RE = re.compile(r":\d+(?:-\d+)?$")
 
 
 def _to_rel_path(raw_path: str, repo_path: str) -> str:
@@ -113,6 +118,8 @@ class FilteredToolWrapper:
         # --- Post-filter for glob (one path per line) ---
         if tool_name in _POST_FILTER_TOOLS:
             result = self._filter_path_list_output(result)
+        elif tool_name == "rag_search":
+            result = self._filter_rag_output(result)
 
         return result
 
@@ -143,6 +150,73 @@ class FilteredToolWrapper:
         metadata = dict(result.metadata)
         metadata["filtered_count"] = removed
         return ToolResult(title=result.title, output=new_output, metadata=metadata)
+
+    def _filter_rag_output(self, result: ToolResult) -> ToolResult:
+        """Strip excluded chunks from rag_search markdown output."""
+        chunks = self._split_rag_chunks(result.output)
+        if not chunks:
+            return result
+
+        kept: list[list[str]] = []
+        removed = 0
+        for chunk in chunks:
+            rel_path = self._rag_chunk_path(chunk)
+            if rel_path and should_exclude_path(rel_path, self._filters):
+                removed += 1
+            else:
+                kept.append(chunk)
+
+        if removed == 0:
+            return result
+
+        new_output = self._join_rag_chunks(kept)
+        if not new_output:
+            new_output = "No matches after applying repository filters."
+        new_output += f"\n({removed} chunk{'s' if removed != 1 else ''} hidden by filter)"
+
+        metadata = dict(result.metadata)
+        metadata["filtered_count"] = removed
+        if isinstance(metadata.get("matches"), int):
+            metadata["matches"] = max(0, metadata["matches"] - removed)
+        return ToolResult(title=result.title, output=new_output, metadata=metadata)
+
+    @staticmethod
+    def _split_rag_chunks(output: str) -> list[list[str]]:
+        chunks: list[list[str]] = []
+        current: list[str] = []
+        for line in output.splitlines():
+            if line.startswith("### "):
+                if current:
+                    chunks.append(current)
+                current = [line]
+            elif current:
+                current.append(line)
+        if current:
+            chunks.append(current)
+        return chunks
+
+    @staticmethod
+    def _rag_chunk_path(chunk: list[str]) -> str | None:
+        if not chunk:
+            return None
+        match = _RAG_HEADER_RE.match(chunk[0])
+        if not match:
+            return None
+        return _RAG_LINE_RANGE_RE.sub("", match.group("loc"))
+
+    @staticmethod
+    def _join_rag_chunks(chunks: list[list[str]]) -> str:
+        rendered: list[str] = []
+        for index, chunk in enumerate(chunks, 1):
+            next_chunk = list(chunk)
+            next_chunk[0] = re.sub(
+                r"^###\s+\d+\.",
+                f"### {index}.",
+                next_chunk[0],
+                count=1,
+            )
+            rendered.append("\n".join(next_chunk).rstrip())
+        return "\n\n".join(rendered)
 
 
 def wrap_tools_with_filters(

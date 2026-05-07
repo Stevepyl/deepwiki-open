@@ -2,7 +2,7 @@
 number: PLAN-INDEX
 name: Plans Index
 description: Tracks implementation status for plans and their sub-tasks under handbooks/plans.
-update_at: 2026-05-06
+update_at: 2026-05-07
 category: index
 language: en
 audience: developers-and-agents
@@ -32,7 +32,7 @@ Read this index before opening individual plans when you need current implementa
 | [PLAN-005 - Chat View](PLAN-005-chat-view.md) | `implemented` | `implemented` | Plan frontmatter is `status: implemented`; `src/app/[owner]/[repo]/ask/page.tsx` is 197 lines and uses `AgentChatRequest`; `src/components/chat/*` renders the stream, messages, citations, tool events, topbar, composer, and helper runtime; `useConversationHistory` persists full turns; `bun run lint`, `bun run build`, `git diff --check`, the `src_old` import scan, and a dev-server route smoke pass. Browser automation was not run because local Playwright is unavailable. | Depends on PLAN-003 and PLAN-007's implemented connector contract. |
 | [PLAN-006 - Wiki Workshop Slides and Loading](PLAN-006-wiki-family.md) | `implemented` | `implemented` | Plan frontmatter is `status: implemented`; `src/app/[owner]/[repo]/page.tsx` is 142 lines, workshop is 121 lines, slides is 103 lines, and `GenerationLoader` is 114 lines; `src/components/wiki/*`, `src/components/workshop/*`, `src/components/slides/*`, `src/components/generation/*`, `src/hooks/useGenerationPhases.ts`, and wiki-family utilities are implemented in `src`; `bun run lint` and `bun run build` pass. | Depends on PLAN-003; keeps wiki-family generation on raw-text `/ws/chat`. |
 | [PLAN-007 - Agent Chat Backend API](PLAN-007-agent-chat-api.md) | `implemented` | `implemented` | Plan frontmatter is `status: implemented`; `api/agent/chat_handler.py` implements the chat core; `/ws/agent-chat`, `/chat/agent-stream`, and `/agent/info` are registered in `api/api.py`; frontend connector files exist under `src_old/types/`, `src_old/utils/`, and `src_old/app/api/chat/agent-stream/`. | 10 sub-tasks implemented. |
-| [PLAN-008 - RAG Retrieval as an Agent Tool](PLAN-008-rag-tool.md) | `proposed` | `not-started` | Plan frontmatter is `status: proposed`; `api/retriever.py` and `api/tools/rag.py` do not exist; `_TOOL_CLASSES` in `api/tools/__init__.py` does not register `rag_search`. | 6 sub-tasks, none started. |
+| [PLAN-008 - RAG Retrieval as an Agent Tool](PLAN-008-rag-tool.md) | `implemented` | `implemented` | Plan frontmatter is `status: implemented`; `api/retriever.py` implements `CodeRetriever` plus the LRU/per-key-lock cache; `api/tools/rag.py` and `api/tools/rag.txt` implement `rag_search`; `_TOOL_CLASSES`, `_ALL_TOOLS`, `_READ_ONLY_TOOLS`, and `wiki-writer` register the tool; `FilteredToolWrapper` post-filters excluded RAG chunks; focused backend tests pass. | 6 sub-tasks implemented. |
 
 ## Sub-tasks
 
@@ -64,9 +64,9 @@ Read this index before opening individual plans when you need current implementa
 | PLAN-007 | Extend `src_old/utils/websocketClient.ts` with `createAgentChatWebSocket` | `implemented` | Uses structured `onEvent` callback against `/ws/agent-chat`. |
 | PLAN-007 | Frontend HTTP connector `src_old/utils/agentChatStream.ts` | `implemented` | Reads line-buffered NDJSON from `/api/chat/agent-stream`. |
 | PLAN-007 | Frontend Next.js proxy `src_old/app/api/chat/agent-stream/route.ts` | `implemented` | Proxies to backend `/chat/agent-stream` with `Accept: application/x-ndjson`. |
-| PLAN-008 | Implement `api/retriever.py` (`CodeRetriever`, LRU cache with per-key lock) | `not-started` | Pure retrieval component; reuses `DatabaseManager` for the `.pkl` disk cache. |
-| PLAN-008 | Implement `api/tools/rag.py` and `api/tools/rag.txt` | `not-started` | Thin `Tool`-ABC adapter calling `get_or_build_retriever(repo_path)`. |
-| PLAN-008 | Register `rag_search` in tool registry and agent configs | `not-started` | Add to `_TOOL_CLASSES`, `_ALL_TOOLS`, and `_READ_ONLY_TOOLS`. |
-| PLAN-008 | Post-filter `rag_search` results in `FilteredToolWrapper` | `not-started` | Drop chunks whose `meta_data.file_path` is excluded. |
-| PLAN-008 | Add unit tests for retriever and tool | `not-started` | `tests/unit/test_retriever.py`, `tests/unit/test_rag_tool.py`, `tests/api/test_agent_chat_rag_tool.py`. |
-| PLAN-008 | Update handbooks indexes to list PLAN-008 | `implemented` | This entry in `handbooks/plans/index.md`/`index.json` and `handbooks/index.md`. |
+| PLAN-008 | Implement `api/retriever.py` (`CodeRetriever`, LRU cache with per-key lock) | `implemented` | `api/retriever.py` reuses `DatabaseManager.prepare_database`, validates embeddings, builds `FAISSRetriever`, and caches per normalized repo path plus embedder type. |
+| PLAN-008 | Implement `api/tools/rag.py` and `api/tools/rag.txt` | `implemented` | `RagTool` loads the retriever cache, clamps `top_k`, formats ranked file/line chunks, and documents semantic-search usage. |
+| PLAN-008 | Register `rag_search` in tool registry and agent configs | `implemented` | `api/tools/__init__.py` registers `RagTool`; `api/agent/config.py` adds `rag_search` to `_ALL_TOOLS`, `_READ_ONLY_TOOLS`, and `wiki-writer`. |
+| PLAN-008 | Post-filter `rag_search` results in `FilteredToolWrapper` | `implemented` | `api/agent/filtered_tools.py` removes excluded markdown chunks from `rag_search` output and updates filter metadata. |
+| PLAN-008 | Add unit tests for retriever and tool | `implemented` | Added `tests/unit/test_retriever.py`, `tests/unit/test_rag_tool.py`, and `tests/api/test_agent_chat_rag_tool.py`; focused backend suite passes. |
+| PLAN-008 | Update handbooks indexes to list PLAN-008 | `implemented` | PLAN-008 remains listed in `handbooks/index.md`/`index.json`; implementation status is synced in this plans index and `handbooks/plans/index.json`. |

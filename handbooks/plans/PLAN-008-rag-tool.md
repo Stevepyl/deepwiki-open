@@ -2,8 +2,8 @@
 number: PLAN-008
 name: RAG Retrieval as an Agent Tool
 description: Extract the retrieval half of api/rag.py into a small CodeRetriever and expose it to the agent as a rag_search tool, reusing the existing data pipeline cache so repeated calls are fast.
-status: proposed
-update_at: 2026-05-06
+status: implemented
+update_at: 2026-05-07
 category: plan
 language: en
 audience: developers-and-agents
