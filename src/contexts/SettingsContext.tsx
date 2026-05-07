@@ -6,6 +6,24 @@ const MODEL_KEY = "opswiki.modelSelection";
 const AUTH_KEY = "opswiki.authCode";
 const SETTINGS_KEY = "opswiki.settings";
 
+export interface ModelConfigModel {
+  id: string;
+  name: string;
+}
+
+export interface ModelConfigProvider {
+  id: string;
+  name: string;
+  supportsCustomModel?: boolean;
+  defaultModel?: string;
+  models: ModelConfigModel[];
+}
+
+export interface ModelConfig {
+  providers: ModelConfigProvider[];
+  defaultProvider: string;
+}
+
 export interface SettingsContextValue {
   hydrated: boolean;
   provider: string;
@@ -36,6 +54,28 @@ function readJson<T>(key: string, fallback: T): T {
   return raw ? (JSON.parse(raw) as T) : fallback;
 }
 
+export function normalizeModelSelection(
+  config: ModelConfig,
+  selection: { provider: string; model: string },
+) {
+  const providerConfig =
+    config.providers.find((item) => item.id === selection.provider) ??
+    config.providers.find((item) => item.id === config.defaultProvider) ??
+    config.providers[0];
+
+  if (!providerConfig) {
+    return selection;
+  }
+
+  const modelExists = providerConfig.models.some((item) => item.id === selection.model);
+  const model = modelExists ? selection.model : providerConfig.defaultModel ?? providerConfig.models[0]?.id ?? "";
+
+  return {
+    provider: providerConfig.id,
+    model,
+  };
+}
+
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [hydrated, setHydrated] = useState(false);
   const [provider, setProvider] = useState("");
@@ -48,6 +88,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [includedFiles, setIncludedFiles] = useState("");
 
   useEffect(() => {
+    let cancelled = false;
     const modelSelection = readJson(MODEL_KEY, { provider: "", model: "" });
     const settings = readJson(SETTINGS_KEY, {
       token: "",
@@ -57,15 +98,31 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       includedFiles: "",
     });
 
-    setProvider(modelSelection.provider);
-    setModel(modelSelection.model);
-    setAuthCode(window.localStorage.getItem(AUTH_KEY) ?? "");
-    setToken(settings.token);
-    setExcludedDirs(settings.excludedDirs);
-    setExcludedFiles(settings.excludedFiles);
-    setIncludedDirs(settings.includedDirs);
-    setIncludedFiles(settings.includedFiles);
-    setHydrated(true);
+    const applySettings = (nextSelection: { provider: string; model: string }) => {
+      if (cancelled) {
+        return;
+      }
+      setProvider(nextSelection.provider);
+      setModel(nextSelection.model);
+      setAuthCode(window.localStorage.getItem(AUTH_KEY) ?? "");
+      setToken(settings.token);
+      setExcludedDirs(settings.excludedDirs);
+      setExcludedFiles(settings.excludedFiles);
+      setIncludedDirs(settings.includedDirs);
+      setIncludedFiles(settings.includedFiles);
+      setHydrated(true);
+    };
+
+    fetch("/api/models/config")
+      .then((response) => (response.ok ? response.json() : null))
+      .then((config: ModelConfig | null) => {
+        applySettings(config ? normalizeModelSelection(config, modelSelection) : modelSelection);
+      })
+      .catch(() => applySettings(modelSelection));
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {

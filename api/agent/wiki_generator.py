@@ -77,6 +77,12 @@ _CONCISE_INSTRUCTION = (
     "Keep the page list flat."
 )
 
+
+async def _get_or_build_retriever(*args, **kwargs):
+    from api.retriever import get_or_build_retriever  # noqa: PLC0415
+
+    return await get_or_build_retriever(*args, **kwargs)
+
 # ---------------------------------------------------------------------------
 # Request model
 # ---------------------------------------------------------------------------
@@ -297,6 +303,8 @@ async def _run_planner_phase(
     collected: list[str] = []
 
     async def on_event(evt: StreamEvent) -> None:
+        if isinstance(evt, FinishEvent):
+            return
         if isinstance(evt, TextDelta):
             collected.append(evt.content)
         await send_tagged_event(ws, evt, phase="planning")
@@ -371,6 +379,8 @@ async def _run_writer_phase(
     content: list[str] = []
 
     async def on_event(evt: StreamEvent) -> None:
+        if isinstance(evt, FinishEvent):
+            return
         if isinstance(evt, TextDelta):
             content.append(evt.content)
         await send_tagged_event(
@@ -460,19 +470,30 @@ async def handle_agent_wiki_websocket(websocket: WebSocket) -> None:
             req.included_files,
         )
 
-        # Step 3: build file context (prefer front-end hints to avoid redundant walk;
+        # Step 3: build the semantic retriever before generation so rag_search is warm.
+        try:
+            await _get_or_build_retriever(repo_path, repo_type="local")
+        except Exception as exc:
+            logger.exception("embedding preparation failed for %s", req.repo_url)
+            await safe_send(websocket, WikiStructureError(
+                code="internal_error",
+                message=f"Failed to prepare repository embeddings: {exc}",
+            ))
+            return
+
+        # Step 4: build file context (prefer front-end hints to avoid redundant walk;
         #          apply user filters so the planner hint is already scoped)
         file_tree = req.file_tree_hint or build_file_tree(repo_path, filters=filters)
         readme = req.readme_hint or read_repo_readme(repo_path)
 
-        # Step 4: Phase 1 — planner produces wiki structure
+        # Step 5: Phase 1 — planner produces wiki structure
         structure = await _run_planner_phase(
             websocket, req, repo_path, file_tree, readme, filters,
         )
         if structure is None:
             return
 
-        # Step 5: Phase 2 — writer generates content for each page (sequential)
+        # Step 6: Phase 2 — writer generates content for each page (sequential)
         pages = _flatten_pages_in_section_order(structure)
         total = len(pages)
         for idx, page in enumerate(pages):

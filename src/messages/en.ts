@@ -3,6 +3,7 @@ export const shellMessages = {
     homeLabel: "OpsWiki home",
     searchPlaceholder: "Search threads",
     deleteConversation: (title: string) => `Delete ${title}`,
+    newChat: "New chat",
     newRepo: "New repo",
     currentUser: "Current user",
   },

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FiPlus, FiSearch, FiTrash2 } from "react-icons/fi";
 import { useConversationHistory, type RepoEntry } from "../../hooks/useConversationHistory";
@@ -18,6 +19,8 @@ function formatMeta(timestamp: number, messageCount: number) {
 
 export function Sidebar() {
   const { repos, removeConversation } = useConversationHistory();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [query, setQuery] = useState("");
   const [openRepos, setOpenRepos] = useState<Record<string, boolean>>({});
   const searchRef = useRef<HTMLInputElement>(null);
@@ -32,6 +35,16 @@ export function Sidebar() {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
+
+  const newChatHref = useMemo(() => {
+    const [owner, repo, section] = pathname.split("/").filter(Boolean);
+    if (!owner || !repo || section !== "ask") return null;
+    const nextParams = new URLSearchParams(searchParams.toString());
+    nextParams.delete("convId");
+    nextParams.delete("q");
+    const queryString = nextParams.toString();
+    return `/${owner}/${repo}/ask${queryString ? `?${queryString}` : ""}`;
+  }, [pathname, searchParams]);
 
   const visibleRepos = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -65,6 +78,16 @@ export function Sidebar() {
         />
         <kbd className="rounded-[3px] bg-[var(--paper-hover)] px-[5px] py-0.5 font-mono text-[10px] text-[var(--ink-muted)]">⌘K</kbd>
       </label>
+
+      {newChatHref ? (
+        <Link
+          className="mx-5 mb-2 flex items-center gap-2.5 rounded-[var(--radius-sm)] border border-[var(--hairline)] bg-[var(--paper-main)] px-3 py-2 font-sans text-[13px] font-medium text-[var(--ink-primary)] transition-colors duration-[120ms] hover:border-[var(--hairline-strong)] hover:bg-[var(--paper-hover)]"
+          href={newChatHref}
+        >
+          <FiPlus className="h-3.5 w-3.5 text-[var(--accent)]" aria-hidden="true" />
+          {shellMessages.sidebar.newChat}
+        </Link>
+      ) : null}
 
       <div className="flex-1 overflow-y-auto px-0 pb-5 pt-3 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-thumb]:bg-[var(--hairline-strong)]">
         {visibleRepos.map((repo) => {

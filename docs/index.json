@@ -27,12 +27,12 @@
   {
     "name": "Frontend Backend API Reference",
     "number": "DOC-006",
-    "description": "Maps browser-visible frontend routes to FastAPI backend endpoints, including legacy chat, agent chat, streaming payloads, and caveats."
+    "description": "Maps browser-visible frontend routes to FastAPI backend endpoints, including legacy chat, agent chat, agent wiki, streaming payloads, and caveats."
   },
   {
     "name": "Frontend Backend API Reference Chinese",
     "number": "DOC-007",
-    "description": "Chinese translation of the frontend-backend API boundary reference, including the agent chat connector contract."
+    "description": "Chinese translation of the frontend-backend API boundary reference, including the agent chat and agent wiki connector contracts."
   },
   {
     "name": "FAISS Performance Capacity Analysis",

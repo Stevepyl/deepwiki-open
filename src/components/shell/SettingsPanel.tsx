@@ -3,27 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { FiX } from "react-icons/fi";
 import { useLanguage } from "../../contexts/LanguageContext";
-import { useSettings } from "../../contexts/SettingsContext";
+import { normalizeModelSelection, useSettings, type ModelConfig } from "../../contexts/SettingsContext";
 import { shellMessages } from "../../messages/en";
 import { IconButton } from "./IconButton";
-
-interface Model {
-  id: string;
-  name: string;
-}
-
-interface Provider {
-  id: string;
-  name: string;
-  supportsCustomModel?: boolean;
-  defaultModel?: string;
-  models: Model[];
-}
-
-interface ModelConfig {
-  providers: Provider[];
-  defaultProvider: string;
-}
 
 interface SettingsPanelProps {
   open: boolean;
@@ -71,15 +53,12 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
       .then((response) => response.json())
       .then((data: ModelConfig) => {
         setModelConfig(data);
-        if (!provider || !model) {
-          const providerId = provider || data.defaultProvider;
-          const defaultProvider = data.providers.find((item) => item.id === providerId);
-          if (!provider) {
-            setProvider(data.defaultProvider);
-          }
-          if (!model) {
-            setModel(defaultProvider?.defaultModel ?? defaultProvider?.models[0]?.id ?? "");
-          }
+        const nextSelection = normalizeModelSelection(data, { provider, model });
+        if (nextSelection.provider !== provider) {
+          setProvider(nextSelection.provider);
+        }
+        if (nextSelection.model !== model) {
+          setModel(nextSelection.model);
         }
       });
 

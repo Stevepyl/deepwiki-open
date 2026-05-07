@@ -2,7 +2,7 @@
 number: DOC-006
 name: Frontend Backend API Reference
 description: Maps browser-visible frontend routes to FastAPI backend endpoints, payloads, streaming behavior, and caveats.
-update_at: 2026-05-06
+update_at: 2026-05-08
 category: api-reference
 language: en
 audience: developers-and-agents
@@ -26,7 +26,7 @@ Browser client
   │    /api/chat/stream, /api/chat/agent-stream, /api/models/config, ...
   │
   └─ Direct WebSocket calls
-       ws://<backend>/ws/chat, ws://<backend>/ws/agent-chat
+       ws://<backend>/ws/chat, ws://<backend>/ws/agent-chat, ws://<backend>/ws/agent-wiki
 ```
 
 The frontend is a Next.js application in `src/`. The backend is a FastAPI app in `api/api.py`.
@@ -65,16 +65,16 @@ Source files:
 | `/api/wiki_cache` | `DELETE` | `/api/wiki_cache` | Next rewrite | Clear server-side wiki cache before regeneration. |
 | `/export/wiki` | `POST` | `/export/wiki` | Next rewrite | Download generated wiki as Markdown or JSON. |
 | `/local_repo/structure` | `GET` | `/local_repo/structure` | Next rewrite | Read a local repository file tree and README. |
-| `ws://<backend>/ws/chat` | WebSocket | `/ws/chat` | Direct browser WebSocket | Stream wiki generation, Ask answers, slides, and workshop content. |
+| `ws://<backend>/ws/chat` | WebSocket | `/ws/chat` | Direct browser WebSocket | Stream legacy raw-text chat, slides, and workshop content. |
 | `/api/chat/stream` | `POST` | `/chat/completions/stream` | Next route proxy | HTTP streaming fallback for `/ws/chat`. |
 | `ws://<backend>/ws/agent-chat` | WebSocket | `/ws/agent-chat` | Direct browser WebSocket | Stream structured agent chat events for future Ask UI work. |
 | `/api/chat/agent-stream` | `POST` | `/chat/agent-stream` | Next route proxy | HTTP NDJSON fallback for structured agent chat events. |
+| `ws://<backend>/ws/agent-wiki` | WebSocket | `/ws/agent-wiki` | Direct browser WebSocket | Generate wiki cache through structured two-phase agent events. |
 
 ### Backend-Registered APIs Not Currently Called by the Frontend
 
 | Backend URL | Method | Purpose |
 |---|---:|---|
-| `/ws/agent-wiki` | WebSocket | Agent-based two-phase wiki generator. Registered in FastAPI, but no current frontend caller was found. |
 | `/agent/info` | `GET` | Lists the chat-eligible agent configs (`wiki`, `explore`, `deep-research`) for a future agent picker. |
 | `/health` | `GET` | Backend health check for Docker/monitoring. |
 | `/` | `GET` | Root endpoint that lists registered routes dynamically. |
@@ -761,9 +761,9 @@ Backend endpoint:
 
 Purpose:
 
-- Main streaming endpoint for repository wiki generation.
-- Main streaming endpoint for Ask/chat.
-- Also used for slides and workshop generation.
+- Legacy raw-text streaming endpoint for chat-style prompts.
+- Still used by slides and workshop generation.
+- Current first-time wiki cache generation uses `/ws/agent-wiki` instead.
 
 Request:
 
@@ -809,8 +809,6 @@ Validation and errors:
 
 Frontend callers:
 
-- Wiki structure generation in `src/app/[owner]/[repo]/page.tsx`.
-- Wiki page content generation in `src/app/[owner]/[repo]/page.tsx`.
 - Ask page in `src/app/[owner]/[repo]/ask/page.tsx`.
 - Slides page in `src/app/[owner]/[repo]/slides/page.tsx`.
 - Workshop page in `src/app/[owner]/[repo]/workshop/page.tsx`.
@@ -992,7 +990,8 @@ Backend endpoint:
 Frontend status:
 
 - Registered in FastAPI.
-- No current frontend caller was found in `src/`.
+- Used by `src/utils/wikiGeneration.ts#generateWikiCache` for first-time and refreshed wiki cache generation.
+- Slides and workshop generation remain on the legacy raw-text `/ws/chat` helper.
 
 Purpose:
 
@@ -1039,6 +1038,7 @@ Implementation notes:
 - Events are JSON objects with a discriminating `type` field.
 - Planner and writer phases add metadata such as `phase`, `page_index`, and `page_id`.
 - The endpoint clones/downloads the repository before planning.
+- The current frontend cache builder consumes `wiki_structure_ready`, `wiki_page_done`, `wiki_structure_error`, `wiki_page_error`, `error`, and `finish`; tool and text events are ignored for cache construction.
 
 ## 6. End-to-End Flows
 
@@ -1061,22 +1061,17 @@ Repo wiki page
   ├─ GET /api/auth/status
   ├─ GET /api/wiki_cache?owner&repo&repo_type&language
   │    ├─ cache hit  → render cached wiki
-  │    └─ cache miss → fetch repository structure
+  │    └─ cache miss → render generation loader
   │
-  ├─ Hosted repo: browser calls GitHub/GitLab/Bitbucket APIs directly
-  ├─ Local repo:  GET /local_repo/structure?path=...
-  │
-  ├─ WebSocket /ws/chat
-  │    └─ generate wiki structure
-  │
-  ├─ WebSocket /ws/chat per page
-  │    └─ generate page content
+  ├─ WebSocket /ws/agent-wiki
+  │    ├─ wiki_structure_ready → build wiki_structure
+  │    └─ wiki_page_done per page → build generated_pages
   │
   └─ POST /api/wiki_cache
        └─ persist generated wiki
 ```
 
-If WebSocket setup or streaming fails, the page falls back to `POST /api/chat/stream`.
+This path does not use the raw-text `POST /api/chat/stream` fallback. `wiki_structure_error`, `wiki_page_error`, generic `error`, socket failure, or timeout fail the loader and surface the message to the user.
 
 ### 6.3 Ask Page Flow
 
@@ -1145,7 +1140,7 @@ Most proxies use `SERVER_BASE_URL`, but `/api/wiki/projects` uses `PYTHON_BACKEN
 
 ### 7.3 Direct WebSocket Is Not Covered by Next Rewrites
 
-REST routes can be same-origin through Next. `/ws/chat` and `/ws/agent-chat` are direct to the backend host. Production deployments must expose the FastAPI WebSocket endpoints to the browser or add a separate WebSocket proxy.
+REST routes can be same-origin through Next. `/ws/chat`, `/ws/agent-chat`, and `/ws/agent-wiki` are direct to the backend host. Production deployments must expose the FastAPI WebSocket endpoints to the browser or add a separate WebSocket proxy.
 
 ### 7.4 Cache Key Does Not Include Generation Mode
 
@@ -1175,7 +1170,7 @@ The proxy advertises `Accept: text/event-stream`, but the backend yields raw tex
 
 `/ws/chat` sends normal model output and errors as plain text. The client cannot distinguish structured errors from ordinary output except by string conventions such as `Error:`.
 
-`/ws/agent-chat` is different: errors are structured `AgentChatEvent` objects with `type: "error"`, followed by a terminal `finish` event. Do not reuse raw-text error parsing for the agent path.
+`/ws/agent-chat` and `/ws/agent-wiki` are different: errors are structured event objects, followed by a terminal `finish` event or socket close depending on the route. Do not reuse raw-text error parsing for agent paths.
 
 ### 7.9 Backend CORS Is Permissive
 

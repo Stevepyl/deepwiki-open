@@ -303,10 +303,11 @@ IMPORTANT: You MUST respond with JSON content only (no explanatory text before o
 <workflow>
 You MUST follow these steps in order:
 1. EXPLORE FIRST — Use glob and ls to understand the top-level directory layout.
-2. SAMPLE KEY FILES — Use read on README, package.json, main entry points, or config files to understand the project's purpose and major components.
-3. VERIFY HINTS — The user message provides a file tree hint. Treat it as a starting point only. Use glob/read to confirm which paths actually exist before referencing them in filePaths.
-4. PLAN — Design a wiki structure that serves a developer who wants to understand this codebase.
-5. OUTPUT — Write the complete JSON structure as your final response. No preamble. No code fence. No explanation.
+2. SEMANTIC MAP — Use rag_search for broad questions such as architecture, entry points, configuration, APIs, data flow, storage, tests, and UI/backend boundaries.
+3. SAMPLE KEY FILES — Use read on README, package.json, main entry points, or config files to understand the project's purpose and major components.
+4. VERIFY HINTS — The user message provides a file tree hint. Treat it as a starting point only. Use glob/read to confirm which paths actually exist before referencing them in filePaths.
+5. PLAN — Design a wiki structure that serves a developer who wants to understand this codebase.
+6. OUTPUT — Write the complete JSON structure as your final response. No preamble. No code fence. No explanation.
 </workflow>
 
 <output_format>
@@ -365,6 +366,7 @@ General rules for all pages:
 </guidelines>
 
 <tool_usage>
+- rag_search: Find semantically relevant code chunks before choosing topics and evidence files.
 - glob: Find files by pattern ("*.py", "src/**/*.ts"). Essential for mapping the codebase.
 - ls: List directory contents. Use to understand subdirectory structure.
 - read: Read a file. Use to understand module responsibilities before assigning filePaths.
@@ -380,14 +382,15 @@ IMPORTANT: Write all prose and explanations in {language_name} language. Code sn
 
 <workflow>
 You MUST follow the "explore-then-write" discipline:
-1. VERIFY HINTS — The user message provides suggested file paths. These are planner hints, NOT ground truth.
+1. SEMANTIC SEARCH — Start with rag_search for the page title and topic to find the most relevant implementation chunks.
+2. VERIFY HINTS — The user message provides suggested file paths. These are planner hints, NOT ground truth.
    - For each suggested path: run `ls` or attempt a `read` to confirm it exists.
    - If a hint path does not exist, drop it and use grep/glob to find the correct file.
    - Never cite a file you have not verified exists.
-2. EXPLORE DEEPLY — Use grep to find all call sites, implementations, and tests related to the page topic. Follow import chains.
-3. READ KEY FILES — Read the most relevant files in full. Use bash for supplementary info (git log, line counts, grep -c).
-4. DRAFT — Write the Markdown page based only on what your tools have confirmed.
-5. SELF-CHECK — Before finishing, mentally verify: Does every Sources citation point to a real file? Is every code snippet from an actual file you read?
+3. EXPLORE DEEPLY — Use grep to find all call sites, implementations, and tests related to the page topic. Follow import chains.
+4. READ KEY FILES — Read the most relevant files in full. Use bash for supplementary info (git log, line counts, grep -c).
+5. DRAFT — Write the Markdown page based only on what your tools have confirmed.
+6. SELF-CHECK — Before finishing, mentally verify: Does every Sources citation point to a real file? Is every code snippet from an actual file you read?
 </workflow>
 
 <hint_vs_fact>
@@ -432,6 +435,7 @@ Your entire response is a Markdown document. Follow this structure exactly:
 </output_format>
 
 <tool_usage>
+- rag_search: Start here for semantic discovery around the page topic; then read the returned files for full context.
 - grep: Find all usages of a function, class, or constant across the codebase.
 - glob: Locate files by pattern. Use when you need to find tests, configs, or type definitions.
 - read: Read a specific file. Always prefer reading the actual file over guessing its contents.

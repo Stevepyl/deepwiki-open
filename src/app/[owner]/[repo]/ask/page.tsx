@@ -33,12 +33,13 @@ export default function AskPage() {
   const settings = useSettings();
   const { language } = useLanguage();
   const { addConversation, getConversation, hydrated } = useConversationHistory();
+  const activeConvId = searchParams.get("convId");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [streaming, setStreaming] = useState(false);
   const [deepResearch, setDeepResearch] = useState(false);
   const [agentName, setAgentName] = useState<AgentName>("explore");
-  const [conversationId, setConversationId] = useState(searchParams.get("convId") ?? newId());
+  const [conversationId, setConversationId] = useState(activeConvId ?? newId());
   const [loadedConvId, setLoadedConvId] = useState("");
   const activeWs = useRef<WebSocket | null>(null);
   const autoSubmitted = useRef(false);
@@ -50,15 +51,23 @@ export default function AskPage() {
   useEffect(() => () => activeWs.current?.close(), []);
 
   useEffect(() => {
-    const convId = searchParams.get("convId");
-    if (!hydrated || !convId || loadedConvId === convId) return;
-    const conv = getConversation(convId);
+    if (!hydrated || !activeConvId || loadedConvId === activeConvId) return;
+    const conv = getConversation(activeConvId);
     if (conv) {
       setConversationId(conv.id);
       setMessages(conv.messages.map((message) => ({ ...message, id: newId() })));
     }
-    setLoadedConvId(convId);
-  }, [getConversation, hydrated, loadedConvId, searchParams]);
+    setLoadedConvId(activeConvId);
+  }, [activeConvId, getConversation, hydrated, loadedConvId]);
+
+  useEffect(() => {
+    if (!hydrated || activeConvId) return;
+    setConversationId(newId());
+    setMessages([]);
+    setDraft("");
+    setLoadedConvId("");
+    autoSubmitted.current = false;
+  }, [activeConvId, hydrated]);
 
   const updateUrl = useCallback(() => {
     const next = new URLSearchParams(searchParams.toString());
@@ -83,7 +92,7 @@ export default function AskPage() {
   const submit = useCallback(
     async (forcedQuestion?: string) => {
       const question = (forcedQuestion ?? draft).trim();
-      if (!question || streaming) return;
+      if (!question || streaming || !settings.hydrated) return;
       const userMessage: ChatMessage = { id: newId(), role: "user", content: question, timestamp: Date.now() };
       const assistantId = newId();
       const assistantMessage: ChatMessage = {
@@ -160,12 +169,11 @@ export default function AskPage() {
 
   useEffect(() => {
     const q = searchParams.get("q");
-    const convId = searchParams.get("convId");
-    if (!hydrated || !q || autoSubmitted.current || streaming) return;
-    if (convId && loadedConvId !== convId) return;
+    if (!hydrated || !settings.hydrated || !q || autoSubmitted.current || streaming) return;
+    if (activeConvId && loadedConvId !== activeConvId) return;
     autoSubmitted.current = true;
     void submit(q);
-  }, [hydrated, loadedConvId, searchParams, streaming, submit]);
+  }, [activeConvId, hydrated, loadedConvId, searchParams, settings.hydrated, streaming, submit]);
 
   return (
     <AppShell

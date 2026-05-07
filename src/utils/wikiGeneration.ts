@@ -1,10 +1,14 @@
 import type { SettingsContextValue } from "../contexts/SettingsContext";
 import type RepoInfo from "../types/repoinfo";
 import type { WikiPage } from "../types/wiki/wikipage";
-import type { WikiStructure } from "../types/wiki/wikistructure";
-import { createChatWebSocket, type ChatCompletionRequest } from "./websocketClient";
+import {
+  createAgentWikiWebSocket,
+  createChatWebSocket,
+  type AgentWikiRequest,
+  type ChatCompletionRequest,
+} from "./websocketClient";
 import getRepoUrl from "./getRepoUrl";
-import { normalizeGeneratedStructure, slugify, type WikiCache } from "./wiki";
+import { normalizeGeneratedStructure, type WikiCache } from "./wiki";
 
 type GenerationSettings = Pick<
   SettingsContextValue,
@@ -14,6 +18,10 @@ type GenerationSettings = Pick<
 interface StreamOptions {
   onText?: (text: string) => void;
   onSocket?: (socket: WebSocket) => void;
+}
+
+interface GenerateWikiOptions extends StreamOptions {
+  onPageStart?: (index: number, total: number, page: WikiPage) => void;
 }
 
 const WIKI_GENERATION_TIMEOUT_MS = 45 * 60 * 1000;
@@ -31,6 +39,22 @@ function requestFor(repoInfo: RepoInfo, language: string, settings: GenerationSe
     included_dirs: settings.includedDirs || undefined,
     included_files: settings.includedFiles || undefined,
     messages: [{ role: "user", content: prompt }],
+  };
+}
+
+function agentWikiRequestFor(repoInfo: RepoInfo, language: string, settings: GenerationSettings): AgentWikiRequest {
+  return {
+    repo_url: getRepoUrl(repoInfo),
+    type: repoInfo.type,
+    token: repoInfo.token || settings.token || undefined,
+    provider: settings.provider || undefined,
+    model: settings.model || undefined,
+    language,
+    comprehensive: true,
+    excluded_dirs: settings.excludedDirs || undefined,
+    excluded_files: settings.excludedFiles || undefined,
+    included_dirs: settings.includedDirs || undefined,
+    included_files: settings.includedFiles || undefined,
   };
 }
 
@@ -68,81 +92,99 @@ async function streamRawText(request: ChatCompletionRequest, options: StreamOpti
   return streamWebSocket(request, options);
 }
 
-function extractJson(text: string): unknown {
-  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i)?.[1];
-  const source = fenced ?? text;
-  const start = source.indexOf("{");
-  const end = source.lastIndexOf("}");
-  if (start < 0 || end < start) {
-    throw new Error("Wiki structure response did not contain JSON");
-  }
-  return JSON.parse(source.slice(start, end + 1));
-}
+function streamAgentWikiCache(
+  repoInfo: RepoInfo,
+  language: string,
+  settings: GenerationSettings,
+  options: GenerateWikiOptions,
+): Promise<WikiCache> {
+  return new Promise<WikiCache>((resolve, reject) => {
+    let wikiStructure: WikiCache["wiki_structure"] | null = null;
+    const generatedPages: WikiCache["generated_pages"] = {};
+    let settled = false;
+    let socket: WebSocket | null = null;
 
-function toStructure(value: unknown): WikiStructure {
-  const data = value as { wiki_structure?: WikiStructure } & Partial<WikiStructure>;
-  return normalizeGeneratedStructure(data.wiki_structure ?? (data as WikiStructure));
-}
-
-function buildStructurePrompt(repoInfo: RepoInfo, language: string) {
-  return `Generate a comprehensive repository wiki structure for ${getRepoUrl(repoInfo)}.
-
-Return JSON only. Do not wrap it in XML.
-
-Schema:
-{
-  "id": "wiki",
-  "title": "Project Wiki",
-  "description": "One sentence summary",
-  "sections": [{"id": "architecture", "title": "Architecture", "pages": ["overview"]}],
-  "pages": [
-    {
-      "id": "overview",
-      "title": "Architecture Overview",
-      "content": "",
-      "filePaths": ["README.md"],
-      "importance": "high",
-      "relatedPages": []
+    function settle(fn: () => void) {
+      if (!settled) {
+        settled = true;
+        clearTimeout(timeout);
+        fn();
+      }
     }
-  ]
-}
 
-Create 8-12 useful pages grouped into 3-5 sections. Use stable kebab-case ids. Prefer concrete source file paths when you know them. Generate all titles and descriptions in language code "${language}".`;
-}
+    function fail(message: string) {
+      socket?.close();
+      settle(() => reject(new Error(message)));
+    }
 
-function buildPagePrompt(repoInfo: RepoInfo, structure: WikiStructure, page: WikiPage, language: string) {
-  const siblingTitles = structure.pages.map((item) => item.title).join(", ");
-  return `Write the wiki page "${page.title}" for ${getRepoUrl(repoInfo)}.
+    const timeout = setTimeout(() => {
+      socket?.close();
+      settle(() => reject(new Error("Agent wiki generation WebSocket timed out")));
+    }, WIKI_GENERATION_TIMEOUT_MS);
 
-Known file paths for this page: ${page.filePaths.length > 0 ? page.filePaths.join(", ") : "infer from repository context"}.
-Related wiki pages: ${siblingTitles}.
-
-Return Markdown only. Start with a concise technical overview, then use H2/H3 sections, code references, and Mermaid diagrams when they clarify architecture. Do not include frontmatter. Write in language code "${language}".`;
+    socket = createAgentWikiWebSocket(
+      agentWikiRequestFor(repoInfo, language, settings),
+      (event) => {
+        switch (event.type) {
+          case "text_delta":
+            options.onText?.(event.content);
+            break;
+          case "wiki_structure_ready":
+            wikiStructure = normalizeGeneratedStructure(event.structure);
+            break;
+          case "wiki_page_done": {
+            const page = wikiStructure?.pages.find((item) => item.id === event.page_id) ?? {
+              id: event.page_id,
+              title: event.page_title,
+              content: "",
+              filePaths: [],
+              importance: "medium" as const,
+              relatedPages: [],
+            };
+            options.onPageStart?.(event.page_index + 1, event.total_pages, page);
+            generatedPages[event.page_id] = event.content.trim();
+            break;
+          }
+          case "wiki_structure_error":
+            fail(event.message);
+            break;
+          case "wiki_page_error":
+            fail(`Wiki page generation failed for ${event.page_id}: ${event.message}`);
+            break;
+          case "error":
+            fail(event.error);
+            break;
+          case "finish":
+            settle(() => {
+              if (!wikiStructure) {
+                reject(new Error("Agent wiki generation finished without wiki structure"));
+                return;
+              }
+              resolve({
+                wiki_structure: wikiStructure,
+                generated_pages: generatedPages,
+                repo: repoInfo,
+                provider: settings.provider || undefined,
+                model: settings.model || undefined,
+              });
+            });
+            break;
+        }
+      },
+      () => fail("Agent wiki generation WebSocket failed"),
+      () => settle(() => reject(new Error("Agent wiki generation WebSocket closed before completion"))),
+    );
+    options.onSocket?.(socket);
+  });
 }
 
 export async function generateWikiCache(
   repoInfo: RepoInfo,
   language: string,
   settings: GenerationSettings,
-  options: StreamOptions & { onPageStart?: (index: number, total: number, page: WikiPage) => void } = {},
+  options: GenerateWikiOptions = {},
 ): Promise<WikiCache> {
-  const structureText = await streamRawText(requestFor(repoInfo, language, settings, buildStructurePrompt(repoInfo, language)), options);
-  const wikiStructure = toStructure(extractJson(structureText));
-  const generatedPages: Record<string, string> = {};
-  for (const [index, page] of wikiStructure.pages.entries()) {
-    options.onPageStart?.(index + 1, wikiStructure.pages.length, page);
-    const content = await streamRawText(requestFor(repoInfo, language, settings, buildPagePrompt(repoInfo, wikiStructure, page, language)), {
-      onSocket: options.onSocket,
-    });
-    generatedPages[page.id || slugify(page.title)] = content.trim();
-  }
-  return {
-    wiki_structure: wikiStructure,
-    generated_pages: generatedPages,
-    repo: repoInfo,
-    provider: settings.provider || undefined,
-    model: settings.model || undefined,
-  };
+  return streamAgentWikiCache(repoInfo, language, settings, options);
 }
 
 export async function generateWorkshopMarkdown(repoInfo: RepoInfo, cache: WikiCache, language: string, settings: GenerationSettings) {
