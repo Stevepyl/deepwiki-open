@@ -72,10 +72,10 @@ export default function HomePage() {
 
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center px-8 py-16">
-      <div className="absolute left-8 top-7 flex items-center gap-2.5 font-sans text-[11px] font-medium uppercase tracking-[0.18em] text-[var(--ink-muted)] before:text-[13px] before:text-[var(--accent)] before:content-['◌']">
-        <span>OpsWiki · v0 prototype</span>
+      <div className="absolute left-8 top-7 flex items-center gap-1.5 font-sans text-[11px] font-medium tracking-[0.18em] text-[var(--ink-muted)] before:text-[13px] before:text-[var(--accent)] before:content-['◌']">
+        <span>OpsWiki Prototype</span>
         <Link
-          className="tracking-[0.14em] transition-colors duration-150 hover:text-[var(--ink-primary)]"
+          className="tracking-[0.14em] transition-colors font-bold duration-150 hover:text-[var(--ink-primary)]"
           href="/projects"
         >
           All projects →

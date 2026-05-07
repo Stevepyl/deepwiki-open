@@ -15,7 +15,7 @@ export function pathOf(project: ProcessedProject) {
 }
 
 export function projectHref(project: ProcessedProject) {
-  const params = new URLSearchParams({ type: project.repo_type, language: project.language || "en" });
+  const params = new URLSearchParams({ type: project.repo_type, language: project.language || "zh" });
   return `/${encodeURIComponent(project.owner)}/${encodeURIComponent(project.repo)}?${params}`;
 }
 
@@ -123,7 +123,7 @@ export function useProjectsDirectory() {
           owner: project.owner,
           repo: project.repo,
           repo_type: project.repo_type,
-          language: project.language || language || "en",
+          language: project.language || language || "zh",
         }),
       });
       if (!response.ok) {

@@ -12,11 +12,15 @@ interface LanguageContextValue {
 }
 
 const STORAGE_KEY = "opswiki.language";
-const supportedLanguages = { en: "English" };
+const defaultLanguage = "zh";
+const supportedLanguages = {
+  zh: "Mandarin Chinese (中文)",
+  en: "English",
+};
 const LanguageContext = createContext<LanguageContextValue | undefined>(undefined);
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguageState] = useState("en");
+  const [language, setLanguageState] = useState(defaultLanguage);
 
   useEffect(() => {
     const stored = window.localStorage.getItem(STORAGE_KEY);
@@ -27,7 +31,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const setLanguage = (lang: string) => {
-    const nextLanguage = supportedLanguages[lang as keyof typeof supportedLanguages] ? lang : "en";
+    const nextLanguage = supportedLanguages[lang as keyof typeof supportedLanguages] ? lang : defaultLanguage;
     setLanguageState(nextLanguage);
     window.localStorage.setItem(STORAGE_KEY, nextLanguage);
     document.documentElement.lang = nextLanguage;

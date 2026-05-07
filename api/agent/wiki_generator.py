@@ -88,7 +88,7 @@ class AgentWikiRequest(BaseModel):
     token: Optional[str] = None
     provider: str = "google"
     model: Optional[str] = None
-    language: str = "en"
+    language: str = "zh"
     comprehensive: bool = True
     file_tree_hint: Optional[str] = None
     readme_hint: Optional[str] = None

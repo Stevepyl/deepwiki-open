@@ -43,7 +43,7 @@ class AgentChatRequest(BaseModel):
     token: Optional[str] = None
     provider: str = configs.get("default_provider", "openai")
     model: Optional[str] = None
-    language: str = "en"
+    language: str = "zh"
     messages: list[ChatMessage]
     agent_name: str = "explore"
     excluded_dirs: Optional[str] = None

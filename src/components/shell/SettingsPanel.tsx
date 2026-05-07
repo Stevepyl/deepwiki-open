@@ -16,6 +16,7 @@ interface Provider {
   id: string;
   name: string;
   supportsCustomModel?: boolean;
+  defaultModel?: string;
   models: Model[];
 }
 
@@ -70,16 +71,22 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
       .then((response) => response.json())
       .then((data: ModelConfig) => {
         setModelConfig(data);
-        if (!provider) {
-          setProvider(data.defaultProvider);
-          setModel(data.providers.find((item) => item.id === data.defaultProvider)?.models[0]?.id ?? "");
+        if (!provider || !model) {
+          const providerId = provider || data.defaultProvider;
+          const defaultProvider = data.providers.find((item) => item.id === providerId);
+          if (!provider) {
+            setProvider(data.defaultProvider);
+          }
+          if (!model) {
+            setModel(defaultProvider?.defaultModel ?? defaultProvider?.models[0]?.id ?? "");
+          }
         }
       });
 
     fetch("/api/auth/status")
       .then((response) => response.json())
       .then((data: { auth_required: boolean }) => setAuthRequired(data.auth_required));
-  }, [open, provider, setModel, setProvider]);
+  }, [model, open, provider, setModel, setProvider]);
 
   const activeProvider = useMemo(
     () => modelConfig?.providers.find((item) => item.id === provider),
@@ -127,7 +134,7 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
                     const providerId = event.target.value;
                     const nextProvider = modelConfig?.providers.find((item) => item.id === providerId);
                     setProvider(providerId);
-                    setModel(nextProvider?.models[0]?.id ?? "");
+                    setModel(nextProvider?.defaultModel ?? nextProvider?.models[0]?.id ?? "");
                   }}
                 >
                   {modelConfig?.providers.map((provider) => (

@@ -137,6 +137,7 @@ class Provider(BaseModel):
     id: str = Field(..., description="Provider identifier")
     name: str = Field(..., description="Display name for the provider")
     models: List[Model] = Field(..., description="List of available models for this provider")
+    defaultModel: Optional[str] = Field(None, description="Default model identifier for this provider")
     supportsCustomModel: Optional[bool] = Field(False, description="Whether this provider supports custom models")
 
 class ModelConfig(BaseModel):
@@ -189,9 +190,16 @@ async def get_model_config():
 
         # Add provider configuration based on config.py
         for provider_id, provider_config in configs["providers"].items():
+            default_model = provider_config.get("default_model")
+            model_ids = list(provider_config["models"].keys())
+            ordered_model_ids = (
+                [default_model] + [model_id for model_id in model_ids if model_id != default_model]
+                if default_model in provider_config["models"]
+                else model_ids
+            )
             models = []
             # Add models from config
-            for model_id in provider_config["models"].keys():
+            for model_id in ordered_model_ids:
                 # Get a more user-friendly display name if possible
                 models.append(Model(id=model_id, name=model_id))
 
@@ -201,6 +209,7 @@ async def get_model_config():
                     id=provider_id,
                     name=f"{provider_id.capitalize()}",
                     supportsCustomModel=provider_config.get("supportsCustomModel", False),
+                    defaultModel=default_model,
                     models=models
                 )
             )
@@ -221,6 +230,7 @@ async def get_model_config():
                     id="google",
                     name="Google",
                     supportsCustomModel=True,
+                    defaultModel="gemini-2.5-flash",
                     models=[
                         Model(id="gemini-2.5-flash", name="Gemini 2.5 Flash")
                     ]
