@@ -20,15 +20,15 @@ export function ChatTopbar({ owner, repo, title, deepResearch, streaming, onDeep
     <Topbar
       breadcrumb={
         <>
-          <span className="font-[var(--font-mono)] text-[12.5px]">{owner}/{repo}</span>
+          <span className="font-mono text-[12.5px]">{owner}/{repo}</span>
           <span className="text-[var(--ink-faint)]">/</span>
-          <span className="max-w-[280px] truncate font-[var(--font-serif)] italic">{title}</span>
+          <span className="max-w-[280px] truncate font-serif italic">{title}</span>
         </>
       }
       switcher={<Switcher owner={owner} repo={repo} />}
       actions={
         <>
-          <label className="mr-2 flex items-center gap-1.5 font-[var(--font-sans)] text-[11px] text-[var(--ink-muted)]">
+          <label className="mr-2 flex items-center gap-1.5 font-sans text-[11px] text-[var(--ink-muted)]">
             <input
               type="checkbox"
               checked={deepResearch}

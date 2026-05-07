@@ -29,14 +29,14 @@ interface SettingsPanelProps {
   onClose: () => void;
 }
 
-const sectionTitleClass = "font-[var(--font-sans)] text-[11px] font-medium uppercase tracking-normal text-[var(--ink-muted)]";
+const sectionTitleClass = "font-sans text-[11px] font-medium uppercase tracking-normal text-[var(--ink-muted)]";
 const fieldClass = "flex flex-col gap-[7px] text-xs text-[var(--ink-secondary)]";
 const controlClass =
   "w-full rounded-[var(--radius-sm)] border border-[var(--hairline)] bg-[var(--paper-main)] px-2.5 py-[9px] text-[var(--ink-primary)]";
-const textareaClass = `${controlClass} min-h-[82px] resize-y font-[var(--font-mono)] text-xs`;
+const textareaClass = `${controlClass} min-h-[82px] resize-y font-mono text-xs`;
 const sectionClass = "flex flex-col gap-3";
 const actionButtonClass =
-  "flex w-fit items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 font-[var(--font-sans)] text-[12.5px] font-medium text-[var(--ink-primary)] transition-colors duration-[120ms] hover:bg-[var(--paper-hover)]";
+  "flex w-fit items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 font-sans text-[12.5px] font-medium text-[var(--ink-primary)] transition-colors duration-[120ms] hover:bg-[var(--paper-hover)]";
 
 export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
   const {
@@ -108,7 +108,7 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
     >
       <div className="flex h-full w-[min(420px,100vw)] flex-col border-l border-[var(--hairline-strong)] bg-[var(--paper-panel)] shadow-[-12px_0_36px_rgba(26,24,21,0.08)]">
         <header className="flex h-[var(--topbar-h)] items-center justify-between border-b border-[var(--hairline)] px-5">
-          <div className="font-[var(--font-serif)] text-[17px] font-medium">{shellMessages.settings.title}</div>
+          <div className="font-serif text-[17px] font-medium">{shellMessages.settings.title}</div>
           <IconButton aria-label={shellMessages.settings.close} onClick={onClose}>
             <FiX aria-hidden="true" />
           </IconButton>

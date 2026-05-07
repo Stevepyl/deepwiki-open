@@ -26,7 +26,7 @@ export function SlideNav({ currentIndex, total, onFullscreen, onGoTo, onNext, on
         >
           <FiChevronLeft aria-hidden="true" className="h-3.5 w-3.5" />
         </button>
-        <span className="min-w-10 text-center font-[var(--font-sans)] text-[11px] font-medium tabular-nums tracking-normal text-[var(--ink-muted)]">
+        <span className="min-w-10 text-center font-sans text-[11px] font-medium tabular-nums tracking-normal text-[var(--ink-muted)]">
           {currentIndex + 1} / {total}
         </span>
         <div className="flex items-center gap-[5px]" role="tablist" aria-label="Slides">
@@ -61,15 +61,15 @@ export function SlideNav({ currentIndex, total, onFullscreen, onGoTo, onNext, on
       >
         <FiMaximize2 aria-hidden="true" className="h-3.5 w-3.5" />
       </button>
-      <div className="fixed bottom-[26px] right-16 z-[21] font-[var(--font-sans)] text-[10px] tracking-normal text-[var(--ink-faint)]">
-        <kbd className="rounded border border-[var(--hairline)] bg-[var(--paper-panel)] px-[5px] py-px font-[var(--font-mono)] text-[9px] text-[var(--ink-muted)]">
+      <div className="fixed bottom-[26px] right-16 z-[21] font-sans text-[10px] tracking-normal text-[var(--ink-faint)]">
+        <kbd className="rounded border border-[var(--hairline)] bg-[var(--paper-panel)] px-[5px] py-px font-mono text-[9px] text-[var(--ink-muted)]">
           ←
         </kbd>{" "}
-        <kbd className="rounded border border-[var(--hairline)] bg-[var(--paper-panel)] px-[5px] py-px font-[var(--font-mono)] text-[9px] text-[var(--ink-muted)]">
+        <kbd className="rounded border border-[var(--hairline)] bg-[var(--paper-panel)] px-[5px] py-px font-mono text-[9px] text-[var(--ink-muted)]">
           →
         </kbd>{" "}
         to navigate ·{" "}
-        <kbd className="rounded border border-[var(--hairline)] bg-[var(--paper-panel)] px-[5px] py-px font-[var(--font-mono)] text-[9px] text-[var(--ink-muted)]">
+        <kbd className="rounded border border-[var(--hairline)] bg-[var(--paper-panel)] px-[5px] py-px font-mono text-[9px] text-[var(--ink-muted)]">
           F
         </kbd>{" "}
         fullscreen

@@ -17,7 +17,7 @@ export const FilterInput = forwardRef<HTMLInputElement, FilterInputProps>(functi
       <FiSearch aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-[var(--ink-muted)]" />
       <input
         aria-label="Filter repositories"
-        className="min-w-0 flex-1 font-[var(--font-serif)] text-[15px] italic text-[var(--ink-primary)] placeholder:text-[var(--ink-muted)]"
+        className="min-w-0 flex-1 font-serif text-[15px] italic text-[var(--ink-primary)] placeholder:text-[var(--ink-muted)]"
         onChange={(event) => onChange(event.target.value)}
         placeholder="Filter repositories..."
         ref={ref}

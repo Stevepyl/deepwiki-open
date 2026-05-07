@@ -74,14 +74,14 @@ export function GenerationLoader({ owner, repo, repoInfo, language, settings }: 
     <main className="relative flex min-h-screen flex-col items-center justify-center bg-[var(--paper-main)] px-8 py-16">
       <div className="absolute left-8 top-7 flex items-center gap-2.5 text-[var(--ink-muted)]">
         <Link
-          className="flex items-center gap-1.5 font-[var(--font-sans)] text-[11px] text-[var(--ink-faint)] transition-colors duration-[120ms] hover:text-[var(--ink-secondary)]"
+          className="flex items-center gap-1.5 font-sans text-[11px] text-[var(--ink-faint)] transition-colors duration-[120ms] hover:text-[var(--ink-secondary)]"
           href="/"
         >
           <FiArrowLeft aria-hidden="true" className="h-3 w-3" />
           Back
         </Link>
         <span className="text-[11px] text-[var(--ink-faint)]">/</span>
-        <span className="font-[var(--font-mono)] text-xs tracking-normal text-[var(--ink-secondary)]">
+        <span className="font-mono text-xs tracking-normal text-[var(--ink-secondary)]">
           {repoLabel(owner, repo, repoInfo.type)}
         </span>
       </div>
@@ -94,16 +94,16 @@ export function GenerationLoader({ owner, repo, repoInfo, language, settings }: 
         <div className="h-px flex-1 overflow-hidden rounded bg-[var(--hairline)]">
           <div className="hairline-progress h-full rounded bg-[var(--accent)]" style={{ width: `${phases.percent}%` }} />
         </div>
-        <span className="w-10 text-right font-[var(--font-mono)] text-[10.5px] text-[var(--ink-muted)]">
+        <span className="w-10 text-right font-mono text-[10.5px] text-[var(--ink-muted)]">
           {phases.percent}%
         </span>
       </div>
-      <p className="mt-7 max-w-[420px] text-center font-[var(--font-serif)] text-[14.5px] italic leading-[1.6] text-[var(--ink-muted)]">
+      <p className="mt-7 max-w-[420px] text-center font-serif text-[14.5px] italic leading-[1.6] text-[var(--ink-muted)]">
         This usually takes 2-4 minutes for a repository of this size. You can leave this tab; the wiki will be ready when you return.
       </p>
       {phases.error && <p className="mt-3 max-w-[520px] text-center text-xs text-[var(--accent)]">{phases.error}</p>}
       <button
-        className="mt-4 font-[var(--font-sans)] text-[11px] uppercase tracking-normal text-[var(--ink-faint)] transition-colors duration-[120ms] hover:text-[var(--ink-secondary)]"
+        className="mt-4 font-sans text-[11px] uppercase tracking-normal text-[var(--ink-faint)] transition-colors duration-[120ms] hover:text-[var(--ink-secondary)]"
         type="button"
         onClick={cancel}
       >

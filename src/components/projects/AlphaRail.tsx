@@ -24,7 +24,7 @@ export function AlphaRail({ letters, activeLetter }: AlphaRailProps) {
         <div className="flex flex-col items-center gap-0.5" key={letter}>
           <span className="my-1 h-[3px] w-[3px] rounded-full bg-[var(--hairline-strong)]" />
           <a
-            className={`flex h-6 w-8 items-center justify-center rounded font-[var(--font-mono)] text-[11px] font-medium tracking-[0.06em] transition-all duration-150 ${
+            className={`flex h-6 w-8 items-center justify-center rounded font-mono text-[11px] font-medium tracking-[0.06em] transition-all duration-150 ${
               activeLetter === letter
                 ? "bg-[var(--accent-soft)] text-[var(--accent)]"
                 : "text-[var(--ink-faint)] hover:bg-[var(--paper-hover)] hover:text-[var(--ink-primary)]"

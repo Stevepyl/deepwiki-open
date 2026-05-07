@@ -34,7 +34,7 @@ export function Switcher(props: SwitcherProps) {
           return (
             <button
               aria-selected={active}
-              className={`flex items-center gap-1.5 rounded-[5px] px-3 py-1.5 font-[var(--font-sans)] text-[11.5px] font-medium tracking-normal transition-all duration-150 [&>svg]:h-3 [&>svg]:w-3 ${
+              className={`flex items-center gap-1.5 rounded-[5px] px-3 py-1.5 font-sans text-[11.5px] font-medium tracking-normal transition-all duration-150 [&>svg]:h-3 [&>svg]:w-3 ${
                 active
                   ? "bg-[var(--paper-main)] text-[var(--ink-primary)] shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
                   : "text-[var(--ink-muted)] hover:text-[var(--ink-primary)]"
@@ -70,7 +70,7 @@ export function Switcher(props: SwitcherProps) {
         const active = pathname === href;
         return (
           <Link
-            className={`flex items-center gap-1.5 rounded-[5px] px-4 py-1.5 font-[var(--font-sans)] text-xs font-medium tracking-normal transition-all duration-150 [&>svg]:h-3 [&>svg]:w-3 ${
+            className={`flex items-center gap-1.5 rounded-[5px] px-4 py-1.5 font-sans text-xs font-medium tracking-normal transition-all duration-150 [&>svg]:h-3 [&>svg]:w-3 ${
               active
                 ? "bg-[var(--paper-main)] text-[var(--ink-primary)] shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
                 : "text-[var(--ink-muted)] hover:text-[var(--ink-primary)]"

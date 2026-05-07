@@ -63,7 +63,7 @@ export function Sidebar() {
           onChange={(event) => setQuery(event.target.value)}
           placeholder={shellMessages.sidebar.searchPlaceholder}
         />
-        <kbd className="rounded-[3px] bg-[var(--paper-hover)] px-[5px] py-0.5 font-[var(--font-mono)] text-[10px] text-[var(--ink-muted)]">⌘K</kbd>
+        <kbd className="rounded-[3px] bg-[var(--paper-hover)] px-[5px] py-0.5 font-mono text-[10px] text-[var(--ink-muted)]">⌘K</kbd>
       </label>
 
       <div className="flex-1 overflow-y-auto px-0 pb-5 pt-3 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-thumb]:bg-[var(--hairline-strong)]">
@@ -77,11 +77,11 @@ export function Sidebar() {
                 type="button"
                 onClick={() => setOpenRepos((current) => ({ ...current, [key]: !isOpen }))}
               >
-                <span className="w-2.5 shrink-0 font-[var(--font-mono)] text-[9px] text-[var(--ink-muted)]">{isOpen ? "▾" : "▸"}</span>
-                <span className="min-w-0 flex-1 truncate text-left font-[var(--font-mono)] text-[12.5px] font-medium text-[var(--ink-primary)]">
+                <span className="w-2.5 shrink-0 font-mono text-[9px] text-[var(--ink-muted)]">{isOpen ? "▾" : "▸"}</span>
+                <span className="min-w-0 flex-1 truncate text-left font-mono text-[12.5px] font-medium text-[var(--ink-primary)]">
                   {repo.owner}/{repo.repo}
                 </span>
-                <span className="rounded-[10px] bg-[var(--paper-hover)] px-1.5 py-0.5 font-[var(--font-sans)] text-[10px] leading-none text-[var(--ink-muted)]">
+                <span className="rounded-[10px] bg-[var(--paper-hover)] px-1.5 py-0.5 font-sans text-[10px] leading-none text-[var(--ink-muted)]">
                   {repo.convs.length}
                 </span>
               </button>
@@ -96,10 +96,10 @@ export function Sidebar() {
                         className="flex flex-col gap-0.5 pr-5"
                         href={`/${repo.owner}/${repo.repo}/ask?convId=${conv.id}`}
                       >
-                        <span className="truncate font-[var(--font-serif)] text-[13.5px] font-normal leading-[1.35] text-[var(--ink-primary)]">
+                        <span className="truncate font-serif text-[13.5px] font-normal leading-[1.35] text-[var(--ink-primary)]">
                           {conv.title}
                         </span>
-                        <span className="font-[var(--font-sans)] text-[11px] text-[var(--ink-muted)]">
+                        <span className="font-sans text-[11px] text-[var(--ink-muted)]">
                           {formatMeta(conv.lastMessageAt, conv.messageCount)}
                         </span>
                       </Link>
@@ -122,14 +122,14 @@ export function Sidebar() {
 
       <footer className="flex items-center justify-between border-t border-[var(--hairline)] px-5 pb-5 pt-3">
         <Link
-          className="flex items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 font-[var(--font-sans)] text-[12.5px] font-medium text-[var(--ink-primary)] transition-colors duration-[120ms] hover:bg-[var(--paper-hover)]"
+          className="flex items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 font-sans text-[12.5px] font-medium text-[var(--ink-primary)] transition-colors duration-[120ms] hover:bg-[var(--paper-hover)]"
           href="/"
         >
           <FiPlus className="h-3.5 w-3.5 text-[var(--accent)]" aria-hidden="true" />
           {shellMessages.sidebar.newRepo}
         </Link>
         <div
-          className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--ink-secondary)] font-[var(--font-serif)] text-[13px] font-medium text-[var(--paper-main)]"
+          className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--ink-secondary)] font-serif text-[13px] font-medium text-[var(--paper-main)]"
           aria-label={shellMessages.sidebar.currentUser}
         >
           S

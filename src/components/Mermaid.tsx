@@ -26,7 +26,7 @@ mermaid.initialize({
     lineColor: "#C04A1A",
     secondaryColor: "#EFEAE0",
     tertiaryColor: "#F5F1EA",
-    fontFamily: "Inter, sans-serif",
+    fontFamily: "var(--font-sans)",
   },
   themeCSS: `
     .node rect, .node circle, .node ellipse, .node polygon, .node path {
@@ -54,7 +54,7 @@ mermaid.initialize({
       filter: brightness(0.98);
     }
   `,
-  fontFamily: "Inter, sans-serif",
+  fontFamily: "var(--font-sans)",
   fontSize: 12,
 });
 

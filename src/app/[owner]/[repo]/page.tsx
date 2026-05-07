@@ -85,9 +85,9 @@ export default function WikiPage() {
         <Topbar
           breadcrumb={
             <>
-              <span className="font-[var(--font-mono)] text-xs text-[var(--ink-primary)]">{repoLabel(owner, repo, repoInfo.type)}</span>
+              <span className="font-mono text-xs text-[var(--ink-primary)]">{repoLabel(owner, repo, repoInfo.type)}</span>
               <span className="text-[var(--ink-faint)]">/</span>
-              <span className="font-[var(--font-serif)] text-xs italic text-[var(--ink-secondary)]">
+              <span className="font-serif text-xs italic text-[var(--ink-secondary)]">
                 {activePage?.title ?? "Wiki"}
               </span>
             </>
@@ -127,7 +127,7 @@ export default function WikiPage() {
     >
       <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       <section className="grid max-w-[1100px] grid-cols-[240px_1fr] gap-12 px-10 pb-6 pt-10 max-[1100px]:grid-cols-1">
-        {loading && <div className="font-[var(--font-serif)] text-[16px] italic text-[var(--ink-muted)]">Loading wiki...</div>}
+        {loading && <div className="font-serif text-[16px] italic text-[var(--ink-muted)]">Loading wiki...</div>}
         {activePage && (
           <>
             <div className="max-[1100px]:hidden">

@@ -30,7 +30,7 @@ export function WikiTopbarActions({ slidesHref, onExport }: WikiTopbarActionsPro
         <div className="absolute right-0 top-10 z-[70] min-w-40 rounded-[var(--radius-sm)] border border-[var(--hairline)] bg-[var(--paper-panel)] p-1 shadow-[0_10px_24px_rgba(26,24,21,0.08)]">
           {(["markdown", "json"] as const).map((format) => (
             <button
-              className="flex w-full items-center gap-2 rounded-[5px] px-3 py-2 text-left font-[var(--font-sans)] text-xs text-[var(--ink-secondary)] hover:bg-[var(--paper-hover)] hover:text-[var(--ink-primary)]"
+              className="flex w-full items-center gap-2 rounded-[5px] px-3 py-2 text-left font-sans text-xs text-[var(--ink-secondary)] hover:bg-[var(--paper-hover)] hover:text-[var(--ink-primary)]"
               key={format}
               type="button"
               onClick={() => {

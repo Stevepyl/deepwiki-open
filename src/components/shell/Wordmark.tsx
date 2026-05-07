@@ -3,12 +3,12 @@ interface WordmarkProps {
 }
 
 export function Wordmark({ size }: WordmarkProps) {
-  const className = `select-none font-[var(--font-serif)] font-medium leading-none tracking-normal text-[var(--ink-primary)] ${
+  const className = `select-none font-serif font-medium leading-none tracking-normal text-[var(--ink-primary)] ${
     size === "hero" ? "text-[104px]" : "text-[22px]"
   }`;
   const content = (
     <>
-      <em className="font-medium italic">Ops</em>Wiki
+      <em className="font-bold">OpsWiki</em>
     </>
   );
 

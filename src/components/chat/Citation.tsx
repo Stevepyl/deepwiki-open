@@ -6,7 +6,7 @@ interface CitationProps {
 export function Citation({ index, path }: CitationProps) {
   return (
     <a
-      className="inline-flex max-w-full items-center gap-1.5 rounded border border-[var(--hairline)] bg-[var(--paper-panel)] px-2 py-1 font-[var(--font-mono)] text-[11.5px] text-[var(--ink-secondary)] transition-all duration-[120ms] hover:border-[var(--accent-line)] hover:text-[var(--accent)]"
+      className="inline-flex max-w-full items-center gap-1.5 rounded border border-[var(--hairline)] bg-[var(--paper-panel)] px-2 py-1 font-mono text-[11.5px] text-[var(--ink-secondary)] transition-all duration-[120ms] hover:border-[var(--accent-line)] hover:text-[var(--accent)]"
       href={`#source-${index}`}
       title={path}
     >

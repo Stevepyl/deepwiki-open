@@ -30,13 +30,13 @@ export function DirCard({
       }`}
     >
       <Link className="flex flex-col gap-[7px] px-5 py-[18px] pr-14" href={href}>
-        <span className="font-[var(--font-mono)] text-[13px] font-medium tracking-normal text-[var(--ink-primary)]">
+        <span className="font-mono text-[13px] font-medium tracking-normal text-[var(--ink-primary)]">
           {path}
         </span>
-        <span className="font-[var(--font-serif)] text-[13.5px] italic leading-[1.45] text-[var(--ink-secondary)]">
+        <span className="font-serif text-[13.5px] italic leading-[1.45] text-[var(--ink-secondary)]">
           {description}
         </span>
-        <span className="flex items-center gap-2.5 font-[var(--font-sans)] text-[10.5px] tracking-normal text-[var(--ink-muted)]">
+        <span className="flex items-center gap-2.5 font-sans text-[10.5px] tracking-normal text-[var(--ink-muted)]">
           <span>{conversationCount} convs</span>
           <span className="h-0.5 w-0.5 rounded-full bg-[var(--ink-faint)]" />
           <span>{updatedAt}</span>

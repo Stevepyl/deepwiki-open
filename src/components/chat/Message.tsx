@@ -19,7 +19,7 @@ export function Message({ message }: MessageProps) {
   return (
     <article className={`flex items-start gap-4 ${isUser ? "message--user" : "message--ai"}`}>
       <div
-        className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full font-[var(--font-serif)] text-sm font-medium ${
+        className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full font-serif text-sm font-medium ${
           isUser
             ? "bg-[var(--ink-secondary)] text-[var(--paper-main)]"
             : "border border-[var(--hairline)] bg-[var(--paper-panel)] text-[var(--accent)] italic"
@@ -29,12 +29,12 @@ export function Message({ message }: MessageProps) {
         {isUser ? "S" : "A"}
       </div>
       <div className="min-w-0 flex-1">
-        <div className="mb-2.5 flex items-center gap-2.5 font-[var(--font-sans)] text-[11px] font-medium uppercase text-[var(--ink-muted)]">
+        <div className="mb-2.5 flex items-center gap-2.5 font-sans text-[11px] font-medium uppercase text-[var(--ink-muted)]">
           <span>{roleLabel}</span>
           <span className="font-normal normal-case text-[var(--ink-faint)]">{formatTime(message.timestamp)}</span>
           {message.streaming ? <span className="text-[var(--accent)]">Streaming</span> : null}
         </div>
-        <div className="font-[var(--font-serif)] text-base leading-[1.7] text-[var(--ink-primary)] [&_p:first-child]:mt-0 [&_p:last-child]:mb-0">
+        <div className="font-serif text-base leading-[1.7] text-[var(--ink-primary)] [&_p:first-child]:mt-0 [&_p:last-child]:mb-0">
           <Markdown content={visibleContent} />
         </div>
         {message.error ? (

@@ -37,19 +37,19 @@ const paperSyntaxTheme = {
 const Markdown: React.FC<MarkdownProps> = ({ content }) => {
   const components: React.ComponentProps<typeof ReactMarkdown>["components"] = {
     p({ children, ...props }) {
-      return <p {...props} className="my-4 font-[var(--font-serif)] text-base leading-[1.75]">{children}</p>;
+      return <p {...props} className="my-4 font-serif text-base leading-[1.75]">{children}</p>;
     },
     h1({ children, ...props }) {
-      return <h1 {...props} className="mb-4 mt-8 font-[var(--font-serif)] text-[28px] leading-tight">{children}</h1>;
+      return <h1 {...props} className="mb-4 mt-8 font-serif text-[28px] leading-tight">{children}</h1>;
     },
     h2({ children, ...props }) {
-      return <h2 {...props} className="mb-3 mt-7 font-[var(--font-serif)] text-[22px] leading-tight">{children}</h2>;
+      return <h2 {...props} className="mb-3 mt-7 font-serif text-[22px] leading-tight">{children}</h2>;
     },
     h3({ children, ...props }) {
-      return <h3 {...props} className="mb-2 mt-6 font-[var(--font-serif)] text-lg leading-tight">{children}</h3>;
+      return <h3 {...props} className="mb-2 mt-6 font-serif text-lg leading-tight">{children}</h3>;
     },
     h4({ children, ...props }) {
-      return <h4 {...props} className="mb-2 mt-5 font-[var(--font-sans)] text-[13px] font-semibold">{children}</h4>;
+      return <h4 {...props} className="mb-2 mt-5 font-sans text-[13px] font-semibold">{children}</h4>;
     },
     a({ children, href, ...props }) {
       return (
@@ -71,13 +71,13 @@ const Markdown: React.FC<MarkdownProps> = ({ content }) => {
       return <ol {...props} className="my-4 list-decimal pl-6">{children}</ol>;
     },
     li({ children, ...props }) {
-      return <li {...props} className="font-[var(--font-serif)] text-base leading-[1.75]">{children}</li>;
+      return <li {...props} className="font-serif text-base leading-[1.75]">{children}</li>;
     },
     blockquote({ children, ...props }) {
       return (
         <blockquote
           {...props}
-          className="my-6 border-l-2 border-[var(--accent)] px-5 py-1 font-[var(--font-serif)] text-[17px] italic leading-[1.6] text-[var(--ink-secondary)]"
+          className="my-6 border-l-2 border-[var(--accent)] px-5 py-1 font-serif text-[17px] italic leading-[1.6] text-[var(--ink-secondary)]"
         >
           {children}
         </blockquote>
@@ -128,7 +128,7 @@ const Markdown: React.FC<MarkdownProps> = ({ content }) => {
       if (match) {
         return (
           <div className="my-5 overflow-hidden rounded-[var(--radius-sm)] border border-[var(--hairline)] bg-[var(--paper-panel)]">
-            <div className="flex items-center justify-between border-b border-[var(--hairline)] px-4 py-2 font-[var(--font-mono)] text-[11px] text-[var(--ink-muted)]">
+            <div className="flex items-center justify-between border-b border-[var(--hairline)] px-4 py-2 font-mono text-[11px] text-[var(--ink-muted)]">
               <span>{match[1]}</span>
               <button
                 type="button"
@@ -154,7 +154,7 @@ const Markdown: React.FC<MarkdownProps> = ({ content }) => {
 
       return (
         <code
-          className={`rounded border border-[var(--hairline)] bg-[var(--paper-panel)] px-1.5 py-px font-[var(--font-mono)] text-[13.5px] text-[var(--accent)] ${className ?? ""}`}
+          className={`rounded border border-[var(--hairline)] bg-[var(--paper-panel)] px-1.5 py-px font-mono text-[13.5px] text-[var(--accent)] ${className ?? ""}`}
         >
           {children}
         </code>

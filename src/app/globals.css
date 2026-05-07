@@ -68,9 +68,9 @@
     height: 100%;
     background: var(--paper-main);
     color: var(--ink-primary);
-    font-family: var(--font-sans);
-    font-size: 14px;
-    line-height: 1.5;
+    font-family: var(--font-serif);
+    font-size: 16px;
+    line-height: 1.25;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }

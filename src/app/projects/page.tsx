@@ -25,10 +25,10 @@ export default function ProjectsPage() {
       <main className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-[var(--topbar-h)] shrink-0 items-center justify-between border-b border-[var(--hairline)] bg-[var(--paper-main)] px-10">
           <div className="flex items-baseline gap-3.5">
-            <h1 className="font-[var(--font-serif)] text-[22px] font-semibold tracking-normal text-[var(--ink-primary)]">
+            <h1 className="font-serif text-[22px] font-semibold tracking-normal text-[var(--ink-primary)]">
               Projects
             </h1>
-            <span className="font-[var(--font-sans)] text-[11px] font-medium uppercase tracking-[0.14em] text-[var(--ink-muted)]">
+            <span className="font-sans text-[11px] font-medium uppercase tracking-[0.14em] text-[var(--ink-muted)]">
               {state.projects.length} repositories
             </span>
           </div>
@@ -65,18 +65,18 @@ export default function ProjectsPage() {
           className="flex-1 overflow-y-auto px-10 pb-16 pt-8 [&::-webkit-scrollbar]:w-2.5 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-thumb]:bg-[var(--hairline-strong)]"
           ref={state.contentRef}
         >
-          {state.isLoading ? <div className="font-[var(--font-serif)] text-lg italic text-[var(--ink-muted)]">Loading projects...</div> : null}
+          {state.isLoading ? <div className="font-serif text-lg italic text-[var(--ink-muted)]">Loading projects...</div> : null}
           {!state.isLoading && state.groups.length === 0 ? (
-            <div className="font-[var(--font-serif)] text-lg italic text-[var(--ink-muted)]">No projects match this filter.</div>
+            <div className="font-serif text-lg italic text-[var(--ink-muted)]">No projects match this filter.</div>
           ) : null}
           {state.groups.map((group) => (
             <section key={group.letter}>
               <div
-                className="mb-3.5 flex scroll-mt-6 items-center gap-2.5 border-b border-[var(--hairline)] pb-3 pt-4 font-[var(--font-mono)] text-[11px] font-medium uppercase tracking-[0.16em] text-[var(--ink-muted)]"
+                className="mb-3.5 flex scroll-mt-6 items-center gap-2.5 border-b border-[var(--hairline)] pb-3 pt-4 font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-[var(--ink-muted)]"
                 data-letter={group.letter}
                 id={`group-${group.letter.toLowerCase()}`}
               >
-                <span className="font-[var(--font-serif)] text-xl font-medium normal-case tracking-normal text-[var(--ink-secondary)]">
+                <span className="font-serif text-xl font-medium normal-case tracking-normal text-[var(--ink-secondary)]">
                   {group.letter}
                 </span>
               </div>
@@ -101,14 +101,14 @@ export default function ProjectsPage() {
 
         <footer className="flex items-center justify-between border-t border-[var(--hairline)] px-10 pb-7 pt-5">
           <Link
-            className="inline-flex items-center gap-2 rounded-[var(--radius-sm)] border border-[var(--hairline)] px-3.5 py-2 font-[var(--font-sans)] text-[13px] font-medium text-[var(--ink-primary)] transition-colors duration-150 hover:border-[var(--hairline-strong)] hover:bg-[var(--paper-hover)] [&>svg]:h-[13px] [&>svg]:w-[13px] [&>svg]:text-[var(--accent)]"
+            className="inline-flex items-center gap-2 rounded-[var(--radius-sm)] border border-[var(--hairline)] px-3.5 py-2 font-sans text-[13px] font-medium text-[var(--ink-primary)] transition-colors duration-150 hover:border-[var(--hairline-strong)] hover:bg-[var(--paper-hover)] [&>svg]:h-[13px] [&>svg]:w-[13px] [&>svg]:text-[var(--accent)]"
             href="/"
           >
             <FiPlus aria-hidden="true" />
             Analyze new repo
           </Link>
-          <span className="font-[var(--font-sans)] text-[10.5px] tracking-[0.04em] text-[var(--ink-faint)]">
-            Press <kbd className="rounded-[3px] border border-[var(--hairline)] bg-[var(--paper-panel)] px-1.5 py-px font-[var(--font-mono)] text-[10px] text-[var(--ink-muted)]">⌘K</kbd> to search
+          <span className="font-sans text-[10.5px] tracking-[0.04em] text-[var(--ink-faint)]">
+            Press <kbd className="rounded-[3px] border border-[var(--hairline)] bg-[var(--paper-panel)] px-1.5 py-px font-mono text-[10px] text-[var(--ink-muted)]">⌘K</kbd> to search
           </span>
         </footer>
       </main>

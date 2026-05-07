@@ -72,7 +72,7 @@ export default function HomePage() {
 
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center px-8 py-16">
-      <div className="absolute left-8 top-7 flex items-center gap-2.5 font-[var(--font-sans)] text-[11px] font-medium uppercase tracking-[0.18em] text-[var(--ink-muted)] before:text-[13px] before:text-[var(--accent)] before:content-['◌']">
+      <div className="absolute left-8 top-7 flex items-center gap-2.5 font-sans text-[11px] font-medium uppercase tracking-[0.18em] text-[var(--ink-muted)] before:text-[13px] before:text-[var(--accent)] before:content-['◌']">
         <span>OpsWiki · v0 prototype</span>
         <Link
           className="tracking-[0.14em] transition-colors duration-150 hover:text-[var(--ink-primary)]"
@@ -84,7 +84,7 @@ export default function HomePage() {
 
       <header className="mb-16 flex flex-col items-center gap-[18px]">
         <Wordmark size="hero" />
-        <p className="font-[var(--font-serif)] text-xl italic tracking-normal text-[var(--ink-secondary)]">
+        <p className="font-serif text-xl tracking-normal text-[var(--ink-secondary)]">
           Understand repos with AI
         </p>
       </header>
@@ -92,7 +92,7 @@ export default function HomePage() {
       <ScratchInput hint={hint} onChange={setValue} onSubmit={submit} ref={inputRef} value={value} />
 
       <section className="mt-12 w-full max-w-[640px]" aria-label="Example repositories">
-        <div className="mb-[18px] flex items-center gap-2.5 font-[var(--font-sans)] text-[11px] font-medium uppercase tracking-[0.14em] text-[var(--ink-muted)] before:h-px before:w-4 before:bg-[var(--hairline-strong)] before:content-['']">
+        <div className="mb-[18px] flex items-center gap-2.5 font-sans text-[11px] font-medium uppercase tracking-[0.14em] text-[var(--ink-muted)] before:h-px before:w-4 before:bg-[var(--hairline-strong)] before:content-['']">
           <span>Or start from</span>
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -102,9 +102,9 @@ export default function HomePage() {
         </div>
       </section>
 
-      <footer className="absolute bottom-7 left-1/2 -translate-x-1/2 font-[var(--font-sans)] text-[11px] tracking-[0.04em] text-[var(--ink-faint)]">
-        Press <kbd className="rounded-[3px] border border-[var(--hairline)] px-1.5 py-px font-[var(--font-mono)] text-[10px]">↵</kbd> to begin · or{" "}
-        <kbd className="rounded-[3px] border border-[var(--hairline)] px-1.5 py-px font-[var(--font-mono)] text-[10px]">⌘K</kbd> to focus search
+      <footer className="absolute bottom-7 left-1/2 -translate-x-1/2 font-sans text-[11px] tracking-[0.04em] text-[var(--ink-faint)]">
+        Press <kbd className="rounded-[3px] border border-[var(--hairline)] px-1.5 py-px font-mono text-[10px]">↵</kbd> to begin · or{" "}
+        <kbd className="rounded-[3px] border border-[var(--hairline)] px-1.5 py-px font-mono text-[10px]">⌘K</kbd> to focus search
       </footer>
     </main>
   );

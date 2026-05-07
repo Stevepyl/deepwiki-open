@@ -73,16 +73,16 @@ export default function SlidesPage() {
       <header className="fixed inset-x-0 top-0 z-20 flex h-12 items-center justify-between border-b border-[var(--hairline)] bg-[rgba(239,234,224,0.85)] px-8 backdrop-blur-[12px] backdrop-saturate-[110%]">
         <Link className="flex items-center gap-2.5 text-[var(--ink-secondary)] hover:text-[var(--ink-primary)]" href={basePath}>
           <FiArrowLeft aria-hidden="true" className="h-[13px] w-[13px]" />
-          <span className="font-[var(--font-mono)] text-xs text-[var(--ink-primary)]">{repoLabel(owner, repo, repoInfo.type)}</span>
+          <span className="font-mono text-xs text-[var(--ink-primary)]">{repoLabel(owner, repo, repoInfo.type)}</span>
           <span className="text-[var(--ink-faint)]">/</span>
-          <span className="font-[var(--font-serif)] text-xs italic text-[var(--ink-secondary)]">{current?.title ?? "Slides"}</span>
+          <span className="font-serif text-xs italic text-[var(--ink-secondary)]">{current?.title ?? "Slides"}</span>
         </Link>
-        <div className="font-[var(--font-sans)] text-[11px] font-medium uppercase tracking-normal text-[var(--ink-muted)]">
+        <div className="font-sans text-[11px] font-medium uppercase tracking-normal text-[var(--ink-muted)]">
           Slide {slides.length === 0 ? 0 : currentIndex + 1} of {slides.length}
         </div>
       </header>
       {slides.length === 0 ? (
-        <div className="flex min-h-screen items-center justify-center font-[var(--font-serif)] text-[16px] italic text-[var(--ink-muted)]">
+        <div className="flex min-h-screen items-center justify-center font-serif text-[16px] italic text-[var(--ink-muted)]">
           Preparing slides...
         </div>
       ) : (

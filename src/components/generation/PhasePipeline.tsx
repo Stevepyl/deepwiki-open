@@ -21,10 +21,10 @@ export function PhasePipeline({ phase }: PhasePipelineProps) {
   const activeIndex = Math.max(0, steps.findIndex((step) => step.id === phase));
   return (
     <div className="flex flex-col items-center gap-2.5">
-      <span className="font-[var(--font-sans)] text-[10.5px] font-medium uppercase tracking-normal text-[var(--ink-muted)]">
+      <span className="font-sans text-[10.5px] font-medium uppercase tracking-normal text-[var(--ink-muted)]">
         Now running
       </span>
-      <h1 className="m-0 text-center font-[var(--font-serif)] text-[32px] font-semibold italic tracking-normal text-[var(--ink-primary)]">
+      <h1 className="m-0 text-center font-serif text-[32px] font-semibold italic tracking-normal text-[var(--ink-primary)]">
         {phaseTitle(phase)}
       </h1>
       <div className="mt-1 flex items-center gap-4">
@@ -33,7 +33,7 @@ export function PhasePipeline({ phase }: PhasePipelineProps) {
           const active = step.id === phase;
           return (
             <span
-              className={`flex items-center gap-2 font-[var(--font-sans)] text-[11px] tracking-normal after:text-[var(--hairline-strong)] after:content-['→'] last:after:content-none ${
+              className={`flex items-center gap-2 font-sans text-[11px] tracking-normal after:text-[var(--hairline-strong)] after:content-['→'] last:after:content-none ${
                 complete
                   ? "text-[var(--ink-muted)] line-through decoration-[var(--hairline-strong)]"
                   : active

@@ -54,14 +54,14 @@ export function Composer({
           />
         )}
         <span
-          className={`relative z-[1] shrink-0 rounded border border-[var(--hairline)] px-2.5 py-1 font-[var(--font-sans)] text-[10.5px] uppercase tracking-normal text-[var(--ink-muted)] ${
+          className={`relative z-[1] shrink-0 rounded border border-[var(--hairline)] px-2.5 py-1 font-sans text-[10.5px] uppercase tracking-normal text-[var(--ink-muted)] ${
             variant === "wiki" ? "bg-[var(--paper-main)]" : "bg-[var(--paper-panel)]"
           }`}
         >
           {modeHint}
         </span>
         <input
-          className="relative z-[1] min-w-0 flex-1 py-[18px] font-[var(--font-serif)] text-base text-[var(--ink-primary)] placeholder:text-[var(--ink-muted)] placeholder:italic"
+          className="relative z-[1] min-w-0 flex-1 py-[18px] font-serif text-base text-[var(--ink-primary)] placeholder:text-[var(--ink-muted)] placeholder:italic"
           value={value}
           onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
@@ -95,7 +95,7 @@ export function Composer({
         </div>
       </form>
       {footer && (
-        <div className="fixed bottom-2 left-[calc(var(--sidebar-w)_+_((100vw_-_var(--sidebar-w))_/_2))] z-[49] flex w-[calc(100%_-_var(--sidebar-w)_-_80px)] max-w-[var(--composer-max-w)] -translate-x-1/2 justify-between gap-5 px-2 font-[var(--font-sans)] text-[10.5px] text-[var(--ink-faint)] [&_kbd]:rounded-[3px] [&_kbd]:border [&_kbd]:border-[var(--hairline)] [&_kbd]:bg-[var(--paper-panel)] [&_kbd]:px-[5px] [&_kbd]:py-px [&_kbd]:font-[var(--font-mono)] [&_kbd]:text-[10px] [&_kbd]:text-[var(--ink-muted)]">
+        <div className="fixed bottom-2 left-[calc(var(--sidebar-w)_+_((100vw_-_var(--sidebar-w))_/_2))] z-[49] flex w-[calc(100%_-_var(--sidebar-w)_-_80px)] max-w-[var(--composer-max-w)] -translate-x-1/2 justify-between gap-5 px-2 font-sans text-[10.5px] text-[var(--ink-faint)] [&_kbd]:rounded-[3px] [&_kbd]:border [&_kbd]:border-[var(--hairline)] [&_kbd]:bg-[var(--paper-panel)] [&_kbd]:px-[5px] [&_kbd]:py-px [&_kbd]:font-mono [&_kbd]:text-[10px] [&_kbd]:text-[var(--ink-muted)]">
           {footer}
         </div>
       )}
