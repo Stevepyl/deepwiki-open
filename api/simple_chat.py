@@ -64,7 +64,10 @@ class ChatCompletionRequest(BaseModel):
     type: Optional[str] = Field("github", description="Type of repository (e.g., 'github', 'gitlab', 'bitbucket')")
 
     # model parameters
-    provider: str = Field("google", description="Model provider (google, openai, openrouter, ollama, bedrock, azure, dashscope)")
+    provider: str = Field(
+        configs.get("default_provider", "openai"),
+        description="Model provider (google, openai, openrouter, ollama, bedrock, azure, dashscope)",
+    )
     model: Optional[str] = Field(None, description="Model name for the specified provider")
 
     language: Optional[str] = Field("en", description="Language for content generation (e.g., 'en', 'ja', 'zh', 'es', 'kr', 'vi')")
@@ -349,7 +352,7 @@ async def chat_completions_stream(request: ChatCompletionRequest):
                 model_type=ModelType.LLM
             )
         elif request.provider == "openrouter":
-            logger.info(f"Using OpenRouter with model: {request.model}")
+            logger.info(f"Using OpenRouter with model: {model_config['model']}")
 
             # Check if OpenRouter API key is set
             if not OPENROUTER_API_KEY:
@@ -358,7 +361,7 @@ async def chat_completions_stream(request: ChatCompletionRequest):
 
             model = OpenRouterClient()
             model_kwargs = {
-                "model": request.model,
+                "model": model_config["model"],
                 "stream": True,
                 "temperature": model_config["temperature"]
             }
@@ -372,7 +375,7 @@ async def chat_completions_stream(request: ChatCompletionRequest):
                 model_type=ModelType.LLM
             )
         elif request.provider == "openai":
-            logger.info(f"Using Openai protocol with model: {request.model}")
+            logger.info(f"Using Openai protocol with model: {model_config['model']}")
 
             # Check if an API key is set for Openai
             if not OPENAI_API_KEY:
@@ -382,7 +385,7 @@ async def chat_completions_stream(request: ChatCompletionRequest):
             # Initialize Openai client
             model = OpenAIClient()
             model_kwargs = {
-                "model": request.model,
+                "model": model_config["model"],
                 "stream": True,
                 "temperature": model_config["temperature"]
             }
@@ -396,7 +399,7 @@ async def chat_completions_stream(request: ChatCompletionRequest):
                 model_type=ModelType.LLM
             )
         elif request.provider == "bedrock":
-            logger.info(f"Using AWS Bedrock with model: {request.model}")
+            logger.info(f"Using AWS Bedrock with model: {model_config['model']}")
 
             # Check if AWS credentials are set
             if not AWS_ACCESS_KEY_ID or not AWS_SECRET_ACCESS_KEY:
@@ -406,7 +409,7 @@ async def chat_completions_stream(request: ChatCompletionRequest):
             # Initialize Bedrock client
             model = BedrockClient()
             model_kwargs = {
-                "model": request.model,
+                "model": model_config["model"],
                 "temperature": model_config["temperature"],
                 "top_p": model_config["top_p"]
             }
@@ -417,12 +420,12 @@ async def chat_completions_stream(request: ChatCompletionRequest):
                 model_type=ModelType.LLM
             )
         elif request.provider == "azure":
-            logger.info(f"Using Azure AI with model: {request.model}")
+            logger.info(f"Using Azure AI with model: {model_config['model']}")
 
             # Initialize Azure AI client
             model = AzureAIClient()
             model_kwargs = {
-                "model": request.model,
+                "model": model_config["model"],
                 "stream": True,
                 "temperature": model_config["temperature"],
                 "top_p": model_config["top_p"]
@@ -434,11 +437,11 @@ async def chat_completions_stream(request: ChatCompletionRequest):
                 model_type=ModelType.LLM
             )
         elif request.provider == "dashscope":
-            logger.info(f"Using Dashscope with model: {request.model}")
+            logger.info(f"Using Dashscope with model: {model_config['model']}")
 
             model = DashscopeClient()
             model_kwargs = {
-                "model": request.model,
+                "model": model_config["model"],
                 "stream": True,
                 "temperature": model_config["temperature"],
                 "top_p": model_config["top_p"],

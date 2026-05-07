@@ -24,6 +24,9 @@ AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
 AWS_SESSION_TOKEN = os.environ.get('AWS_SESSION_TOKEN')
 AWS_REGION = os.environ.get('AWS_REGION')
 AWS_ROLE_ARN = os.environ.get('AWS_ROLE_ARN')
+DEFAULT_CHAT_PROVIDER = "openai"
+CHAT_MODEL_ENV_VAR = "CHAT_MODEL"
+EMBEDDING_MODEL_ENV_VAR = "EMBEDDING_MODEL"
 
 # Set keys in environment (in case they're needed elsewhere in the code)
 if OPENAI_API_KEY:
@@ -96,6 +99,36 @@ def replace_env_placeholders(config: Union[Dict[str, Any], List[Any], str, Any])
         # Handles numbers, booleans, None, etc.
         return config
 
+
+def apply_generator_env_overrides(generator_config: Dict[str, Any]) -> Dict[str, Any]:
+    providers = generator_config.get("providers", {})
+    openai_config = providers.get(DEFAULT_CHAT_PROVIDER)
+    if not openai_config:
+        return generator_config
+
+    generator_config["default_provider"] = DEFAULT_CHAT_PROVIDER
+    chat_model = os.environ.get(CHAT_MODEL_ENV_VAR)
+    if not chat_model:
+        return generator_config
+
+    models = openai_config.setdefault("models", {})
+    base_model = openai_config.get("default_model")
+    if chat_model not in models and base_model in models:
+        models[chat_model] = dict(models[base_model])
+    openai_config["default_model"] = chat_model
+    return generator_config
+
+
+def apply_embedder_env_overrides(embedder_config: Dict[str, Any]) -> Dict[str, Any]:
+    embedding_model = os.environ.get(EMBEDDING_MODEL_ENV_VAR)
+    if not embedding_model:
+        return embedder_config
+
+    openai_embedder = embedder_config.get("embedder")
+    if openai_embedder:
+        openai_embedder.setdefault("model_kwargs", {})["model"] = embedding_model
+    return embedder_config
+
 # Load JSON configuration file
 def load_json_config(filename):
     try:
@@ -123,6 +156,7 @@ def load_json_config(filename):
 # Load generator model configuration
 def load_generator_config():
     generator_config = load_json_config("generator.json")
+    generator_config = apply_generator_env_overrides(generator_config)
 
     # Add client classes to each provider
     if "providers" in generator_config:
@@ -150,6 +184,7 @@ def load_generator_config():
 # Load embedder configuration
 def load_embedder_config():
     embedder_config = load_json_config("embedder.json")
+    embedder_config = apply_embedder_env_overrides(embedder_config)
 
     # Process client classes
     for key in ["embedder", "embedder_ollama", "embedder_google", "embedder_bedrock"]:
@@ -336,7 +371,7 @@ lang_config = load_lang_config()
 
 # Update configuration
 if generator_config:
-    configs["default_provider"] = generator_config.get("default_provider", "google")
+    configs["default_provider"] = generator_config.get("default_provider", DEFAULT_CHAT_PROVIDER)
     configs["providers"] = generator_config.get("providers", {})
 
 # Update embedder configuration
@@ -356,7 +391,7 @@ if lang_config:
     configs["lang_config"] = lang_config
 
 
-def get_model_config(provider="google", model=None):
+def get_model_config(provider=DEFAULT_CHAT_PROVIDER, model=None):
     """
     Get configuration for the specified provider and model
 

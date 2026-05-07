@@ -25,7 +25,7 @@ export const ScratchInput = forwardRef<HTMLInputElement, ScratchInputProps>(func
       <FiSearch aria-hidden="true" className="mr-3.5 h-[18px] w-[18px] shrink-0 text-[var(--ink-muted)]" />
       <input
         aria-label="Repository URL or question"
-        className="min-w-0 flex-1 font-serif text-[20px] text-[var(--ink-primary)] placeholder:text-[var(--ink-muted)] placeholder:italic"
+        className="min-w-0 flex-1 font-serif text-[20px] text-[var(--ink-primary)] placeholder:text-[var(--ink-muted)]"
         onChange={(event) => onChange(event.target.value)}
         placeholder="Paste a GitHub URL, or describe what you want to understand..."
         ref={ref}

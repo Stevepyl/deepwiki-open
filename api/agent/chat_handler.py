@@ -26,6 +26,7 @@ from api.agent.loop import run_agent_loop
 from api.agent.message import AgentMessage
 from api.agent.provider import UnifiedProvider
 from api.agent.stream_events import ErrorEvent, FinishEvent, StreamEvent
+from api.config import configs
 from api.data_pipeline import download_repo
 from api.simple_chat import ChatMessage
 
@@ -40,7 +41,7 @@ class AgentChatRequest(BaseModel):
     repo_url: str
     type: str = "github"
     token: Optional[str] = None
-    provider: str = "google"
+    provider: str = configs.get("default_provider", "openai")
     model: Optional[str] = None
     language: str = "en"
     messages: list[ChatMessage]
