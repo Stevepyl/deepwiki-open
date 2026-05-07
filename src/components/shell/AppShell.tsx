@@ -5,11 +5,12 @@ interface AppShellProps {
   topbar: ReactNode;
   children: ReactNode;
   composer?: ReactNode;
+  className?: string;
 }
 
-export function AppShell({ topbar, children, composer }: AppShellProps) {
+export function AppShell({ topbar, children, composer, className }: AppShellProps) {
   return (
-    <div className="flex h-screen w-full">
+    <div className={`flex h-screen w-full ${className ?? ""}`.trim()}>
       <Sidebar />
       <main className="relative flex min-w-0 flex-1 flex-col bg-[var(--paper-main)] after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:z-40 after:h-[180px] after:bg-[linear-gradient(to_bottom,rgba(245,241,234,0)_0%,rgba(245,241,234,0.6)_35%,rgba(245,241,234,1)_75%)] after:content-['']">
         {topbar}

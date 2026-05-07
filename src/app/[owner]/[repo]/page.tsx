@@ -81,6 +81,7 @@ export default function WikiPage() {
 
   return (
     <AppShell
+      className="font-medium [&_*]:font-medium"
       topbar={
         <Topbar
           breadcrumb={

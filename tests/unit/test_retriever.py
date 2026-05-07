@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import os
 import time
 from types import SimpleNamespace
@@ -130,6 +131,72 @@ def test_database_manager_reuses_existing_pickle_without_reembedding(monkeypatch
 
     assert manager.prepare_db_index(embedder_type="openai") == cached_docs
     transform.assert_not_called()
+
+
+def test_database_manager_reuses_legacy_python_pickle_without_reembedding(monkeypatch, tmp_path):
+    cached_docs = [
+        Document(
+            text="cached",
+            vector=[0.1, 0.2, 0.3],
+            meta_data={"file_path": "src/legacy.py", "type": "py"},
+        )
+    ]
+    db_file = tmp_path / "repo.pkl"
+    db_file.write_bytes(b"cache")
+
+    class FakeLocalDB:
+        def get_transformed_data(self, key):
+            assert key == "split_and_embed"
+            return cached_docs
+
+    monkeypatch.setattr(
+        data_pipeline.LocalDB,
+        "load_state",
+        staticmethod(lambda path: FakeLocalDB()),
+    )
+    transform = Mock()
+    monkeypatch.setattr(data_pipeline, "transform_documents_and_save_to_db", transform)
+
+    manager = DatabaseManager()
+    manager.repo_paths = {
+        "save_repo_dir": str(tmp_path),
+        "save_db_file": str(db_file),
+    }
+
+    assert manager.prepare_db_index(embedder_type="openai") == cached_docs
+    transform.assert_not_called()
+
+
+def test_transform_documents_suppresses_text_splitter_chunk_logs(monkeypatch, tmp_path, caplog):
+    text_splitter_logger = logging.getLogger(data_pipeline.TEXT_SPLITTER_LOGGER_NAME)
+    previous_level = text_splitter_logger.level
+
+    class FakeTransformer:
+        def __call__(self, documents):
+            text_splitter_logger.info("Text merged into 2 chunks.")
+            return documents
+
+    monkeypatch.setattr(
+        data_pipeline,
+        "prepare_data_pipeline",
+        lambda *args, **kwargs: FakeTransformer(),
+    )
+    monkeypatch.setattr(data_pipeline.LocalDB, "save_state", lambda self, filepath: None)
+
+    try:
+        text_splitter_logger.setLevel(logging.INFO)
+        caplog.set_level(logging.INFO, logger=data_pipeline.TEXT_SPLITTER_LOGGER_NAME)
+
+        data_pipeline.transform_documents_and_save_to_db(
+            [_doc("cached", "src/cached.py", [0.1, 0.2, 0.3])],
+            str(tmp_path / "repo.pkl"),
+            embedder_type="openai",
+        )
+
+        assert "Text merged into 2 chunks." not in caplog.messages
+        assert text_splitter_logger.level == logging.INFO
+    finally:
+        text_splitter_logger.setLevel(previous_level)
 
 
 def test_get_or_build_retriever_returns_cached_instance(monkeypatch):

@@ -60,6 +60,16 @@
     "description": "Records the local CLI demo used to smoke-test multi-turn agent Q&A and two-stage wiki generation."
   },
   {
+    "name": "Vector DB Cache and Generation Retry Bugfix",
+    "number": "REC-003",
+    "description": "Records the fix for redundant embedding rebuilds from legacy Python metadata checks and frontend HTTP retry timeouts during wiki generation."
+  },
+  {
+    "name": "Generation Loader WebSocket Lifecycle Bugfix",
+    "number": "REC-004",
+    "description": "Records the fix for generation WebSockets being opened and immediately closed by the frontend loading screen lifecycle."
+  },
+  {
     "name": "Agent WebSocket Input Validation",
     "number": "RISK-001",
     "description": "Records the role-part invariant gap at the external agent WebSocket boundary and the recommended validation strategy."

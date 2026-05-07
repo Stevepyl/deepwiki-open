@@ -169,6 +169,7 @@ export default function AskPage() {
 
   return (
     <AppShell
+      className="font-medium [&_*]:font-medium"
       topbar={
         <ChatTopbar
           deepResearch={deepResearch}

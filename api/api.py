@@ -3,7 +3,7 @@ import logging
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
-from typing import List, Optional, Dict, Any, Literal
+from typing import List, Optional, Dict, Any, Literal, Union
 import json
 from datetime import datetime
 from pydantic import BaseModel, Field
@@ -87,12 +87,17 @@ class WikiStructureModel(BaseModel):
     sections: Optional[List[WikiSection]] = None
     rootSections: Optional[List[str]] = None
 
+class WikiPageContent(BaseModel):
+    content: Optional[str] = None
+
+GeneratedPageValue = Union[str, WikiPage, WikiPageContent]
+
 class WikiCacheData(BaseModel):
     """
     Model for the data to be stored in the wiki cache.
     """
     wiki_structure: WikiStructureModel
-    generated_pages: Dict[str, WikiPage]
+    generated_pages: Dict[str, GeneratedPageValue]
     repo_url: Optional[str] = None  #compatible for old cache
     repo: Optional[RepoInfo] = None
     provider: Optional[str] = None
@@ -105,9 +110,9 @@ class WikiCacheRequest(BaseModel):
     repo: RepoInfo
     language: str
     wiki_structure: WikiStructureModel
-    generated_pages: Dict[str, WikiPage]
-    provider: str
-    model: str
+    generated_pages: Dict[str, GeneratedPageValue]
+    provider: Optional[str] = None
+    model: Optional[str] = None
 
 class WikiExportRequest(BaseModel):
     """

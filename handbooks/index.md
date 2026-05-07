@@ -2,7 +2,7 @@
 number: HBK-INDEX
 name: Handbooks Index
 description: Index of development plans, decisions, records, risks, backlog notes, and handbook guides under handbooks.
-update_at: 2026-05-06
+update_at: 2026-05-07
 category: index
 language: en
 audience: developers-and-agents
@@ -32,6 +32,8 @@ Read this index first when looking for plans, decisions, implementation records,
 
 - [REC-001-agent-wiki-generation-backend](records/REC-001-agent-wiki-generation-backend.md) - Records the Path B backend implementation for two-stage agent-driven wiki generation and its WebSocket protocol.
 - [REC-002-agent-cli-demo](records/REC-002-agent-cli-demo.md) - Records the local CLI demo used to smoke-test multi-turn agent Q&A and two-stage wiki generation.
+- [REC-003-vector-db-cache-and-generation-retry-bugfix](records/REC-003-vector-db-cache-and-generation-retry-bugfix.md) - Records the fix for redundant embedding rebuilds from legacy Python metadata checks and frontend HTTP retry timeouts during wiki generation.
+- [REC-004-generation-loader-websocket-lifecycle-bugfix](records/REC-004-generation-loader-websocket-lifecycle-bugfix.md) - Records the fix for generation WebSockets being opened and immediately closed by the frontend loading screen lifecycle.
 
 ## Risks
 

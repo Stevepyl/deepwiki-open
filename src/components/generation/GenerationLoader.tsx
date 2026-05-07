@@ -25,16 +25,18 @@ export function GenerationLoader({ owner, repo, repoInfo, language, settings }: 
   const router = useRouter();
   const phases = useGenerationPhases();
   const { complete, fail, ingest } = phases;
-  const started = useRef(false);
   const socketRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
-    if (started.current) return;
-    started.current = true;
+    if (!settings.hydrated) return;
     let cancelled = false;
+    const startTimer = window.setTimeout(() => {
+      void run();
+    }, 0);
 
     async function run() {
       try {
+        if (cancelled) return;
         ingest(`Cloning repository ${getRepoUrl(repoInfo)}`);
         ingest("Chunking repository files");
         ingest("Embedding chunk 1/2");
@@ -58,10 +60,11 @@ export function GenerationLoader({ owner, repo, repoInfo, language, settings }: 
       }
     }
 
-    void run();
     return () => {
       cancelled = true;
+      window.clearTimeout(startTimer);
       socketRef.current?.close();
+      socketRef.current = null;
     };
   }, [complete, fail, ingest, language, owner, repo, repoInfo, router, settings]);
 

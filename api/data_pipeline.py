@@ -20,6 +20,7 @@ from api.tools.embedder import get_embedder
 
 # Configure logging
 logger = logging.getLogger(__name__)
+TEXT_SPLITTER_LOGGER_NAME = "adalflow.components.data_process.text_splitter"
 
 # Maximum token limit for OpenAI embedding models
 MAX_EMBEDDING_TOKENS = 8192
@@ -444,7 +445,13 @@ def transform_documents_and_save_to_db(
     db = LocalDB()
     db.register_transformer(transformer=data_transformer, key="split_and_embed")
     db.load(documents)
-    db.transform(key="split_and_embed")
+    text_splitter_logger = logging.getLogger(TEXT_SPLITTER_LOGGER_NAME)
+    previous_level = text_splitter_logger.level
+    try:
+        text_splitter_logger.setLevel(logging.WARNING)
+        db.transform(key="split_and_embed")
+    finally:
+        text_splitter_logger.setLevel(previous_level)
     os.makedirs(os.path.dirname(db_path), exist_ok=True)
     db.save_state(filepath=db_path)
     return db
@@ -862,27 +869,6 @@ class DatabaseManager:
                 return 0
             return 0
 
-        def _needs_python_metadata_refresh(documents: List[Document]) -> bool:
-            required_fields = (
-                "start_line",
-                "end_line",
-                "ast_chunk_index",
-                "ast_chunk_count",
-            )
-            for doc in documents:
-                meta = getattr(doc, "meta_data", {}) or {}
-                if meta.get("type") != "py":
-                    continue
-                for field_name in required_fields:
-                    if meta.get(field_name) is None:
-                        logger.warning(
-                            "Existing database is missing Python chunk metadata '%s' for %s. Rebuilding database...",
-                            field_name,
-                            meta.get("file_path", "unknown"),
-                        )
-                        return True
-            return False
-
         # Handle backward compatibility
         if embedder_type is None and is_ollama_embedder is not None:
             embedder_type = 'ollama' if is_ollama_embedder else None
@@ -908,10 +894,6 @@ class DatabaseManager:
                     if non_empty == 0:
                         logger.warning(
                             "Existing database contains no usable embeddings. Rebuilding embeddings..."
-                        )
-                    elif _needs_python_metadata_refresh(documents):
-                        logger.warning(
-                            "Existing database is missing required Python chunk metadata. Rebuilding embeddings..."
                         )
                     else:
                         return documents

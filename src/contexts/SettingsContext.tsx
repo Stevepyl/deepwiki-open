@@ -7,6 +7,7 @@ const AUTH_KEY = "opswiki.authCode";
 const SETTINGS_KEY = "opswiki.settings";
 
 export interface SettingsContextValue {
+  hydrated: boolean;
   provider: string;
   model: string;
   authCode: string;
@@ -81,6 +82,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<SettingsContextValue>(
     () => ({
+      hydrated,
       provider,
       model,
       authCode,
@@ -98,7 +100,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       setIncludedDirs,
       setIncludedFiles,
     }),
-    [authCode, excludedDirs, excludedFiles, includedDirs, includedFiles, model, provider, token],
+    [authCode, excludedDirs, excludedFiles, hydrated, includedDirs, includedFiles, model, provider, token],
   );
 
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;

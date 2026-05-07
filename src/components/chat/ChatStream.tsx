@@ -23,7 +23,7 @@ export function ChatStream({ messages }: ChatStreamProps) {
   if (messages.length === 0) {
     return (
       <div className="mx-auto flex max-w-[560px] flex-col items-center justify-center py-28 text-center">
-        <p className="font-serif text-[24px] italic leading-snug text-[var(--ink-secondary)]">
+        <p className="font-serif text-[24px] leading-snug text-[var(--ink-secondary)]">
           Ask about the repository structure, decisions, or implementation details.
         </p>
       </div>

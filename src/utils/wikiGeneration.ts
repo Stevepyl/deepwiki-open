@@ -16,6 +16,8 @@ interface StreamOptions {
   onSocket?: (socket: WebSocket) => void;
 }
 
+const WIKI_GENERATION_TIMEOUT_MS = 45 * 60 * 1000;
+
 function requestFor(repoInfo: RepoInfo, language: string, settings: GenerationSettings, prompt: string): ChatCompletionRequest {
   return {
     repo_url: getRepoUrl(repoInfo),
@@ -32,39 +34,19 @@ function requestFor(repoInfo: RepoInfo, language: string, settings: GenerationSe
   };
 }
 
-async function streamHttp(request: ChatCompletionRequest, onText?: (text: string) => void) {
-  const response = await fetch("/api/chat/stream", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(request),
-  });
-  if (!response.ok || !response.body) {
-    throw new Error(`HTTP stream failed (${response.status})`);
-  }
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let output = "";
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    const chunk = decoder.decode(value, { stream: true });
-    output += chunk;
-    onText?.(chunk);
-  }
-  return output;
-}
-
 function streamWebSocket(request: ChatCompletionRequest, options: StreamOptions) {
   return new Promise<string>((resolve, reject) => {
     let output = "";
     let settled = false;
-    const settle = (fn: () => void) => {
+
+    function settle(fn: () => void) {
       if (!settled) {
         settled = true;
         clearTimeout(timeout);
         fn();
       }
-    };
+    }
+
     const socket = createChatWebSocket(
       request,
       (message) => {
@@ -77,17 +59,13 @@ function streamWebSocket(request: ChatCompletionRequest, options: StreamOptions)
     const timeout = setTimeout(() => {
       socket.close();
       settle(() => reject(new Error("Wiki generation WebSocket timed out")));
-    }, 180000);
+    }, WIKI_GENERATION_TIMEOUT_MS);
     options.onSocket?.(socket);
   });
 }
 
 async function streamRawText(request: ChatCompletionRequest, options: StreamOptions = {}) {
-  try {
-    return await streamWebSocket(request, options);
-  } catch {
-    return streamHttp(request, options.onText);
-  }
+  return streamWebSocket(request, options);
 }
 
 function extractJson(text: string): unknown {
