@@ -70,7 +70,10 @@ certs/
 
 # Claude Code local settings and hook scripts (may contain API keys, personal paths)
 .claude/
-.codex/
+!.claude/rules/
+!.claude/rules/**
+!.codex/rules/
+!.codex/rules/**
 .scripts/
 CLAUDE.md
 AGENTS.md
@@ -86,3 +89,4 @@ prototype/
 
 # OpenAI Agents SDK mirrored docs (auto-fetched)
 docs/openai-agent-sdk-docs/
+benchmark/problems.md
