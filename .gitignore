@@ -72,8 +72,7 @@ certs/
 .claude/
 !.claude/rules/
 !.claude/rules/**
-!.codex/rules/
-!.codex/rules/**
+.codex/
 .scripts/
 CLAUDE.md
 AGENTS.md
