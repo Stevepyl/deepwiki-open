@@ -15,6 +15,11 @@
     "description": "Describes how DeepWiki implements agent-like behavior through its RAG components and request flow."
   },
   {
+    "name": "Current Agent Workflow Analysis",
+    "number": "DOC-010",
+    "description": "Chinese analysis of the current custom ReAct agent workflow, chat/wiki entrypoints, tools, event protocol, and risk boundaries."
+  },
+  {
     "name": "DeepWiki Local Database Design",
     "number": "DOC-004",
     "description": "Explains DeepWiki's FAISS-backed local storage, LocalDB tables, and cache files."

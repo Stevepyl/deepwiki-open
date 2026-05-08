@@ -17,6 +17,7 @@ Read this index first when looking for project documentation.
 - [rag-system-overview](architecture/rag-system-overview.md) - Explains the end-to-end RAG architecture, data flow, provider boundaries, and operational behavior.
 - [rag-system-design](architecture/rag-system-design.md) - Documents the RAG pipeline, Document lifecycle, embedding cache behavior, and retrieval implementation details.
 - [agent-design](architecture/agent-design.md) - Describes how DeepWiki implements agent-like behavior through its RAG components and request flow.
+- [current-agent-workflow-analysis](architecture/current-agent-workflow-analysis.md) - Chinese analysis of the current custom ReAct agent workflow, chat/wiki entrypoints, tools, event protocol, and risk boundaries.
 - [database-design](architecture/database-design.md) - Explains DeepWiki's FAISS-backed local storage, LocalDB tables, and cache files.
 - [adalflow-integration](architecture/adalflow-integration.md) - Placeholder for documenting how DeepWiki integrates AdalFlow components.
 
