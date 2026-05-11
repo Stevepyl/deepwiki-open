@@ -1,4 +1,4 @@
-# OpsWiki
+# This README is temporarily deprecated
 
 **DeepWiki** is my own implementation attempt of DeepWiki, automatically creates beautiful, interactive wikis for any GitHub, GitLab, or BitBucket repository! Just enter a repo name, and DeepWiki will:
 
