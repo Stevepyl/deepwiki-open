@@ -6,12 +6,14 @@ from fastapi.responses import JSONResponse, Response
 from typing import List, Optional, Dict, Any, Literal
 import json
 from datetime import datetime
+from pathlib import Path
 from pydantic import BaseModel, Field
 import google.generativeai as genai
 import asyncio
 
 # Configure logging
 from api.logging_config import setup_logging
+from api.routers import capabilities, graph, indexing, repos
 
 setup_logging()
 logger = logging.getLogger(__name__)
@@ -31,6 +33,11 @@ app.add_middleware(
     allow_methods=["*"],  # Allows all methods
     allow_headers=["*"],  # Allows all headers
 )
+
+app.include_router(capabilities.router)
+app.include_router(repos.router)
+app.include_router(indexing.router)
+app.include_router(graph.router)
 
 # Helper function to get adalflow root path
 def get_adalflow_default_root_path():
@@ -155,8 +162,21 @@ class RagPrepareRequest(BaseModel):
     included_dirs: Optional[str] = Field(None, description="Comma- or newline-separated directories to include")
     included_files: Optional[str] = Field(None, description="Comma- or newline-separated file patterns to include")
 
+class PrAnalyzeRequest(BaseModel):
+    repo_id: Optional[str] = Field(None, description="Optional stable repository id")
+    repo_path: Optional[str] = Field(None, description="Local git repository path")
+    base: Optional[str] = Field(None, description="Base git ref")
+    head: Optional[str] = Field(None, description="Head git ref")
+    pr_url: Optional[str] = Field(None, description="GitHub pull request URL")
+    token: Optional[str] = Field(None, description="Optional GitHub token")
+
+class AnalysisFollowupRequest(BaseModel):
+    question: str = Field(..., description="Follow-up question about an analysis session")
+
 from api.config import configs, WIKI_AUTH_MODE, WIKI_AUTH_CODE
 from api.rag_cache import get_prepared_rag, parse_filter_list
+from api.knowledge_store import RepoKnowledgeStore, default_repo_id
+from api.pr_analysis import analyze_diff, analyze_github_pr, answer_followup
 
 @app.get("/lang/config")
 async def get_lang_config():
@@ -205,6 +225,52 @@ async def prepare_rag(request: RagPrepareRequest):
     except Exception as e:
         logger.error(f"Error preparing RAG cache: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error preparing retriever: {str(e)}")
+
+
+@app.post("/api/pr-analysis/analyze")
+async def analyze_pr_impact(request: PrAnalyzeRequest):
+    """Analyze a local git diff or GitHub PR for symbol impact and v1 risks."""
+    store = RepoKnowledgeStore()
+    try:
+        if request.pr_url:
+            return analyze_github_pr(request.pr_url, request.token, store)
+
+        if not request.repo_path or not request.base or not request.head:
+            raise HTTPException(
+                status_code=400,
+                detail="Provide either pr_url, or repo_path with base and head.",
+            )
+
+        repo_path = Path(request.repo_path)
+        if not repo_path.is_dir():
+            raise HTTPException(status_code=400, detail=f"Repository path does not exist: {repo_path}")
+        if not (repo_path / ".git").exists():
+            raise HTTPException(status_code=400, detail=f"Path is not a git repository: {repo_path}")
+
+        repo_id = request.repo_id or default_repo_id(str(repo_path))
+        return analyze_diff(repo_id, repo_path, request.base, request.head, store)
+    except HTTPException:
+        raise
+    except ValueError as e:
+        logger.error("PR analysis validation error: %s", e)
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error("PR analysis failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=f"PR analysis failed: {str(e)}")
+    finally:
+        store.close()
+
+
+@app.post("/api/pr-analysis/{session_id}/ask")
+async def ask_pr_analysis_followup(session_id: str, request: AnalysisFollowupRequest):
+    store = RepoKnowledgeStore()
+    try:
+        session = store.get_analysis_session(session_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="Analysis session not found")
+        return {"answer": answer_followup(request.question, session)}
+    finally:
+        store.close()
 
 
 @app.get("/models/config", response_model=ModelConfig)

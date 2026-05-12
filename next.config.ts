@@ -63,6 +63,10 @@ const nextConfig: NextConfig = {
         source: '/api/lang/config',
         destination: `${TARGET_SERVER_BASE_URL}/lang/config`,
       },
+      {
+        source: '/api/pr-analysis/:path*',
+        destination: `${TARGET_SERVER_BASE_URL}/api/pr-analysis/:path*`,
+      },
     ];
   },
 };

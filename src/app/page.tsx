@@ -459,6 +459,11 @@ export default function Home() {
                     className="text-xs font-medium text-[var(--accent-primary)] hover:text-[var(--highlight)] hover:underline whitespace-nowrap">
                     {t('nav.wikiProjects')}
                   </Link>
+                  <span className="mx-2 text-[var(--muted)]">/</span>
+                  <Link href="/pr-analysis"
+                    className="text-xs font-medium text-[var(--accent-primary)] hover:text-[var(--highlight)] hover:underline whitespace-nowrap">
+                    PR Impact
+                  </Link>
                 </div>
               </div>
             </div>

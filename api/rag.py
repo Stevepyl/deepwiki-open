@@ -43,6 +43,8 @@ class CustomConversation:
 from adalflow.components.retriever.faiss_retriever import FAISSRetriever
 from api.config import configs
 from api.data_pipeline import DatabaseManager
+from api.knowledge_store import KnowledgeChunk, RepoKnowledgeStore, default_repo_id, repo_display_name
+from api.pr_analysis import build_chunk_graph_index
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -78,6 +80,14 @@ DEFAULT_HYBRID_RETRIEVAL_CONFIG = {
     "rrf_k": 60,
     "max_candidates": 48,
     "max_query_tokens": 16,
+}
+
+DEFAULT_GRAPH_RETRIEVAL_CONFIG = {
+    "enabled": True,
+    "top_seed_k": 3,
+    "max_refs_per_seed": 8,
+    "max_candidates_per_seed": 3,
+    "anchor_weight": 0.75,
 }
 
 QUERY_STOPWORDS = {
@@ -426,6 +436,8 @@ IMPORTANT FORMATTING RULES:
         self.doc_position_in_file = {}
         self.doc_metadata_texts = {}
         self.doc_sparse_tokens = {}
+        self.knowledge_store = RepoKnowledgeStore()
+        self.repo_id = ""
 
     @staticmethod
     def _safe_int(value: Any, default: int | None = None) -> int | None:
@@ -449,6 +461,7 @@ IMPORTANT FORMATTING RULES:
         retriever_cfg.pop("symbol_alpha", None)
         retriever_cfg.pop("multi_hop", None)
         retriever_cfg.pop("hybrid", None)
+        retriever_cfg.pop("graph", None)
         return retriever_cfg
 
     def _get_hybrid_retrieval_config(self) -> Dict[str, Any]:
@@ -465,6 +478,18 @@ IMPORTANT FORMATTING RULES:
         config["rrf_k"] = max(1, self._safe_int(config.get("rrf_k"), 60) or 60)
         config["max_candidates"] = max(1, self._safe_int(config.get("max_candidates"), 48) or 48)
         config["max_query_tokens"] = max(1, self._safe_int(config.get("max_query_tokens"), 16) or 16)
+        return config
+
+    def _get_graph_retrieval_config(self) -> Dict[str, Any]:
+        retriever_cfg = self._get_retriever_config()
+        raw_cfg = retriever_cfg.get("graph") or {}
+        config = dict(DEFAULT_GRAPH_RETRIEVAL_CONFIG)
+        config.update(raw_cfg)
+        config["enabled"] = bool(config.get("enabled", True))
+        config["top_seed_k"] = max(1, self._safe_int(config.get("top_seed_k"), 3) or 3)
+        config["max_refs_per_seed"] = max(1, self._safe_int(config.get("max_refs_per_seed"), 8) or 8)
+        config["max_candidates_per_seed"] = max(1, self._safe_int(config.get("max_candidates_per_seed"), 3) or 3)
+        config["anchor_weight"] = self._clamp_float(config.get("anchor_weight"), 0.75)
         return config
 
     def _get_multi_hop_config(self) -> Dict[str, Any]:
@@ -550,6 +575,79 @@ IMPORTANT FORMATTING RULES:
         self.docs_by_symbol_full_name = dict(docs_by_symbol_full_name)
         self.docs_by_file_symbol_name = dict(docs_by_file_symbol_name)
         self.docs_by_file_parent_symbol = dict(docs_by_file_parent_symbol)
+
+    def _doc_indices_for_graph_symbol(self, symbol: str, file_path: str | None = None) -> List[int]:
+        if not symbol:
+            return []
+        candidates: list[int] = []
+        direct = self.docs_by_symbol_full_name.get(symbol)
+        if direct:
+            candidates.extend(direct)
+
+        symbol_tail = symbol.rsplit(".", 1)[-1]
+        if file_path and symbol_tail:
+            candidates.extend(self.docs_by_file_symbol_name.get((file_path, symbol_tail), []))
+
+        if not candidates:
+            for idx, doc in self.doc_index_map.items():
+                meta = self._get_doc_meta(doc)
+                full_name = str(meta.get("symbol_full_name") or "")
+                name = str(meta.get("symbol_name") or "")
+                doc_file = str(meta.get("file_path") or "")
+                if full_name == symbol or full_name.endswith("." + symbol_tail):
+                    candidates.append(idx)
+                elif name == symbol_tail and (not file_path or doc_file == file_path):
+                    candidates.append(idx)
+
+        return self._dedupe_indices(candidates)
+
+    def _persist_knowledge_chunks(self) -> None:
+        chunks: list[KnowledgeChunk] = []
+        for idx, doc in self.doc_index_map.items():
+            meta = self._get_doc_meta(doc)
+            chunk_id = f"{self.repo_id}:{idx}"
+            meta["knowledge_chunk_id"] = chunk_id
+            file_path = str(meta.get("file_path") or "unknown")
+            chunks.append(
+                KnowledgeChunk(
+                    chunk_id=chunk_id,
+                    repo_id=self.repo_id,
+                    rel_path=file_path,
+                    language=str(meta.get("type") or ""),
+                    chunk_type=str(meta.get("ast_type") or meta.get("type") or ""),
+                    symbol_name=str(meta.get("symbol_name") or ""),
+                    qualified_name=str(meta.get("symbol_full_name") or meta.get("title") or ""),
+                    parent_symbol=str(meta.get("parent_symbol") or ""),
+                    start_line=self._safe_int(meta.get("start_line"), 0) or 0,
+                    end_line=self._safe_int(meta.get("end_line"), 0) or 0,
+                    content=str(getattr(doc, "text", "") or ""),
+                )
+            )
+
+        repo_path = (getattr(self.db_manager, "repo_paths", {}) or {}).get("save_repo_dir", "")
+        self.knowledge_store.save_repo(
+            self.repo_id,
+            repo_display_name(repo_path or self.repo_url_or_path),
+            repo_path,
+            len(chunks),
+            "indexed",
+        )
+        self.knowledge_store.replace_chunks(self.repo_id, chunks)
+
+    def _build_knowledge_graph(self) -> None:
+        repo_path = (getattr(self.db_manager, "repo_paths", {}) or {}).get("save_repo_dir")
+        if not repo_path:
+            return
+        try:
+            stats = build_chunk_graph_index(self.repo_id, repo_path, self.knowledge_store)
+            logger.info(
+                "Knowledge graph built for repo_id=%s symbols=%s refs=%s",
+                self.repo_id,
+                stats.get("symbol_count"),
+                stats.get("reference_count"),
+            )
+        except Exception as exc:
+            logger.warning("Failed to build knowledge graph for %s: %s", repo_path, exc)
 
     @staticmethod
     def _normalize_rank_scores(doc_indices: List[int]) -> Dict[int, float]:
@@ -916,6 +1014,46 @@ IMPORTANT FORMATTING RULES:
 
         return anchor_scores
 
+    def _expand_graph_candidates(self, seed_indices: List[int], graph_cfg: Dict[str, Any]) -> Dict[int, float]:
+        if not getattr(self, "repo_id", "") or not getattr(self, "knowledge_store", None):
+            return {}
+
+        anchor_scores: Dict[int, float] = {}
+        for seed_index in seed_indices[: graph_cfg["top_seed_k"]]:
+            seed_doc = self.doc_index_map.get(seed_index)
+            if seed_doc is None:
+                continue
+            meta = self._get_doc_meta(seed_doc)
+            seed_symbol = str(meta.get("symbol_full_name") or meta.get("symbol_name") or "")
+            if not seed_symbol:
+                continue
+
+            refs = self.knowledge_store.get_reference_neighbors(
+                self.repo_id,
+                seed_symbol,
+                limit=graph_cfg["max_refs_per_seed"],
+            )
+            local_selected: set[int] = set()
+            local_count = 0
+            for ref in refs:
+                if local_count >= graph_cfg["max_candidates_per_seed"]:
+                    break
+                source_scope = str(ref.get("source_scope") or "")
+                file_path = str(ref.get("file_path") or "")
+                for candidate_index in self._doc_indices_for_graph_symbol(source_scope, file_path):
+                    if candidate_index == seed_index or candidate_index in local_selected:
+                        continue
+                    local_selected.add(candidate_index)
+                    local_count += 1
+                    anchor_scores[candidate_index] = max(
+                        anchor_scores.get(candidate_index, 0.0),
+                        graph_cfg["anchor_weight"],
+                    )
+                    if local_count >= graph_cfg["max_candidates_per_seed"]:
+                        break
+
+        return anchor_scores
+
     @staticmethod
     def _compare_final_entries(left: Dict[str, Any], right: Dict[str, Any]) -> int:
         if left["final_score"] != right["final_score"]:
@@ -1084,6 +1222,7 @@ IMPORTANT FORMATTING RULES:
         """
         self.initialize_db_manager()
         self.repo_url_or_path = repo_url_or_path
+        self.repo_id = default_repo_id(repo_url_or_path)
         self.transformed_docs = self.db_manager.prepare_database(
             repo_url_or_path,
             type,
@@ -1104,6 +1243,8 @@ IMPORTANT FORMATTING RULES:
 
         logger.info(f"Using {len(self.transformed_docs)} documents with valid embeddings for retrieval")
         self._build_document_indices()
+        self._persist_knowledge_chunks()
+        self._build_knowledge_graph()
 
         try:
             # Use the appropriate embedder for retrieval
@@ -1197,6 +1338,11 @@ IMPORTANT FORMATTING RULES:
             if multi_hop_cfg["enabled"]:
                 seed_indices = hop1_indices[:multi_hop_cfg["seed_k"]]
                 anchor_scores = self._expand_hop2(seed_indices, multi_hop_cfg)
+                graph_cfg = self._get_graph_retrieval_config()
+                if graph_cfg["enabled"]:
+                    graph_scores = self._expand_graph_candidates(seed_indices, graph_cfg)
+                    for doc_index, score in graph_scores.items():
+                        anchor_scores[doc_index] = max(anchor_scores.get(doc_index, 0.0), score)
                 final_indices = self._final_rerank(
                     hop1_indices,
                     semantic_scores,

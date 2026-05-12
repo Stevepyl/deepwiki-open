@@ -129,6 +129,8 @@ export default function AskPage() {
     repoUrl: repoUrl || null
   }), [owner, repo, repoType, token, localPath, repoUrl]);
 
+  const repoUrlForRequest = useMemo(() => getRepoUrl(repoInfo), [repoInfo]);
+
   const [questionInput, setQuestionInput] = useState('');
   const [deepResearchInput, setDeepResearchInput] = useState(initialDeepResearch);
   const [history, setHistory] = useState<AskHistoryItem[]>([]);
@@ -193,7 +195,7 @@ export default function AskPage() {
 
   const buildRequestBody = (item: AskHistoryItem, messageHistory: Message[]): ChatCompletionRequest => {
     const requestBody: ChatCompletionRequest = {
-      repo_url: getRepoUrl(repoInfo),
+      repo_url: repoUrlForRequest,
       type: repoInfo.type,
       messages: messageHistory.map((message) => ({
         role: message.role as 'user' | 'assistant',
@@ -356,6 +358,14 @@ export default function AskPage() {
     setActiveCitationContext({ itemId: item.id, citationIndex: null });
 
     try {
+      if (!repoUrlForRequest) {
+        throw new Error(
+          repoInfo.type === 'local'
+            ? 'Missing local repository path. Please open this Ask page from the wiki page URL that includes local_path, or add local_path to the URL.'
+            : 'Missing repository URL. Please open this Ask page from a valid repository wiki page.'
+        );
+      }
+
       let messageHistory: Message[] = [{
         role: 'user',
         content: item.deepResearch ? `[DEEP RESEARCH] ${item.question}` : item.question
@@ -418,10 +428,11 @@ export default function AskPage() {
       }
 
       console.error('Error during answer generation:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to get a response. Please try again.';
       updateHistoryItem(item.id, (currentItem) => ({
         ...currentItem,
         status: 'error',
-        error: 'Failed to get a response. Please try again.',
+        error: errorMessage,
       }));
     } finally {
       if (activeRunsRef.current.get(item.id) === runId) {

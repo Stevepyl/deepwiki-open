@@ -175,6 +175,56 @@ interface MermaidProps {
   zoomingEnabled?: boolean;
 }
 
+const SOURCE_LINE_PATTERN = /^\s*(?:[-*]\s*)?(?:sources?|citations?|references?|source files?|来源|参考|引用|資料來源|出典)\s*[:：]/i;
+const MARKDOWN_LINK_ONLY_PATTERN = /^\s*(?:[-*]\s*)?(?:\[[^\]]+\]\([^)]*\)(?:\s*,\s*)?)+\s*$/;
+const CODE_FENCE_PATTERN = /^\s*```(?:mermaid)?\s*$/i;
+
+const escapeHtml = (value: string) =>
+  value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+const sanitizeMermaidChart = (chart: string) => {
+  const lines = chart
+    .replace(/\r\n/g, '\n')
+    .replace(/\uFEFF/g, '')
+    .split('\n');
+
+  const sanitizedLines: string[] = [];
+  let droppingCitationBlock = false;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    if (CODE_FENCE_PATTERN.test(trimmed)) {
+      continue;
+    }
+
+    if (SOURCE_LINE_PATTERN.test(trimmed)) {
+      droppingCitationBlock = true;
+      continue;
+    }
+
+    if (droppingCitationBlock) {
+      if (!trimmed || MARKDOWN_LINK_ONLY_PATTERN.test(trimmed)) {
+        continue;
+      }
+      droppingCitationBlock = false;
+    }
+
+    if (MARKDOWN_LINK_ONLY_PATTERN.test(trimmed)) {
+      continue;
+    }
+
+    sanitizedLines.push(line);
+  }
+
+  return sanitizedLines.join('\n').trim();
+};
+
 // Full screen modal component for the diagram
 const FullScreenModal: React.FC<{
   isOpen: boolean;
@@ -365,8 +415,9 @@ const Mermaid: React.FC<MermaidProps> = ({ chart, className = '', zoomingEnabled
         setError(null);
         setSvg('');
 
-        // Render the chart directly without preprocessing
-        const { svg: renderedSvg } = await mermaid.render(idRef.current, chart);
+        const sanitizedChart = sanitizeMermaidChart(chart);
+
+        const { svg: renderedSvg } = await mermaid.render(idRef.current, sanitizedChart);
 
         if (!isMounted) return;
 
@@ -392,7 +443,7 @@ const Mermaid: React.FC<MermaidProps> = ({ chart, className = '', zoomingEnabled
           if (mermaidRef.current) {
             mermaidRef.current.innerHTML = `
               <div class="text-red-500 dark:text-red-400 text-xs mb-1">Syntax error in diagram</div>
-              <pre class="text-xs overflow-auto p-2 bg-gray-100 dark:bg-gray-800 rounded">${chart}</pre>
+              <pre class="text-xs overflow-auto p-2 bg-gray-100 dark:bg-gray-800 rounded">${escapeHtml(sanitizeMermaidChart(chart))}</pre>
             `;
           }
         }

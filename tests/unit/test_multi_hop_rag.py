@@ -43,6 +43,8 @@ def _build_test_rag(documents, retriever):
     rag = object.__new__(RAG)
     rag.transformed_docs = documents
     rag.retriever = retriever
+    rag.repo_id = ""
+    rag.knowledge_store = None
     rag.doc_index_map = {}
     rag.docs_by_file = {}
     rag.docs_by_symbol_full_name = {}
@@ -51,6 +53,14 @@ def _build_test_rag(documents, retriever):
     rag.doc_position_in_file = {}
     rag._build_document_indices()
     return rag
+
+
+class FakeKnowledgeStore:
+    def __init__(self, refs):
+        self.refs = refs
+
+    def get_reference_neighbors(self, repo_id, target, limit=10):
+        return self.refs.get(target, [])[:limit]
 
 
 def test_read_all_documents_adds_python_ast_metadata(tmp_path):
@@ -238,6 +248,88 @@ def test_call_multi_hop_merges_and_reranks_expanded_docs(monkeypatch):
         "pkg/foo.py",
         "pkg/foo.py",
     ]
+
+
+def test_call_graph_expand_adds_reverse_reference_consumer(monkeypatch):
+    documents = [
+        _make_code_doc(
+            text="def changed(): return 1",
+            file_path="pkg/settings.py",
+            symbol_full_name="pkg.settings.changed",
+            symbol_name="changed",
+            ast_chunk_index=0,
+            ast_chunk_count=1,
+            start_line=1,
+            end_line=2,
+        ),
+        _make_code_doc(
+            text="def start_task(): return settings.changed()",
+            file_path="pkg/worker.py",
+            symbol_full_name="pkg.worker.start_task",
+            symbol_name="start_task",
+            ast_chunk_index=0,
+            ast_chunk_count=1,
+            start_line=10,
+            end_line=12,
+        ),
+    ]
+    retriever_result = SimpleNamespace(doc_indices=[0], documents=[])
+    rag = _build_test_rag(documents, retriever=lambda _: [retriever_result])
+    rag.repo_id = "fixture"
+    rag.knowledge_store = FakeKnowledgeStore(
+        {
+            "pkg.settings.changed": [
+                {
+                    "source_scope": "pkg.worker.start_task",
+                    "ref_type": "call",
+                    "target": "pkg.settings.changed",
+                    "file_path": "pkg/worker.py",
+                    "line": 11,
+                    "snippet": "settings.changed()",
+                }
+            ]
+        }
+    )
+
+    monkeypatch.setitem(
+        rag_module.configs,
+        "retriever",
+        {
+            "top_k": 20,
+            "symbol_alpha": 0.7,
+            "hybrid": {
+                "enabled": False,
+            },
+            "multi_hop": {
+                "enabled": True,
+                "seed_k": 1,
+                "hop2_max_per_seed": 3,
+                "neighbor_window": 1,
+                "final_top_k": 10,
+                "final_semantic_weight": 0.55,
+                "final_anchor_weight": 0.30,
+                "final_seed_weight": 0.15,
+                "anchor_weights": {
+                    "symbol_full_name": 1.0,
+                    "symbol_name": 0.85,
+                    "parent_symbol": 0.65,
+                    "same_file_neighbor": 0.5,
+                },
+            },
+            "graph": {
+                "enabled": True,
+                "top_seed_k": 1,
+                "max_refs_per_seed": 5,
+                "max_candidates_per_seed": 2,
+                "anchor_weight": 0.9,
+            },
+        },
+    )
+
+    retrieved_documents = rag.call("Where is changed used?")
+
+    assert retrieved_documents[0].doc_indices == [0, 1]
+    assert retrieved_documents[0].documents[1].meta_data["symbol_full_name"] == "pkg.worker.start_task"
 
 
 def test_call_without_multi_hop_keeps_hop1_order(monkeypatch):

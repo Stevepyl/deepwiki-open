@@ -522,6 +522,8 @@ Based ONLY on the content of the \`[RELEVANT_SOURCE_FILES]\`:
     *   EXTENSIVELY use Mermaid diagrams (e.g., \`flowchart TD\`, \`sequenceDiagram\`, \`classDiagram\`, \`erDiagram\`, \`graph TD\`) to visually represent architectures, flows, relationships, and schemas found in the source files.
     *   Ensure diagrams are accurate and directly derived from information in the \`[RELEVANT_SOURCE_FILES]\`.
     *   Provide a brief explanation before or after each diagram to give context.
+    *   Mermaid code blocks MUST contain ONLY valid Mermaid syntax. Do NOT put citations, Markdown links, "Sources:", "References:", "来源:", prose, comments about source files, or any other non-Mermaid text inside the fenced \`\`\`mermaid block.
+    *   Put diagram citations immediately AFTER the closing \`\`\` fence as normal Markdown text, using the source citation format below.
     *   CRITICAL: All diagrams MUST follow strict vertical orientation:
        - Use "graph TD" (top-down) directive for flow diagrams
        - NEVER use "graph LR" (left-right)
@@ -568,6 +570,7 @@ Based ONLY on the content of the \`[RELEVANT_SOURCE_FILES]\`:
 6.  **Source Citations (EXTREMELY IMPORTANT):**
     *   For EVERY piece of significant information, explanation, diagram, table entry, or code snippet, you MUST cite the specific source file(s) and relevant line numbers from which the information was derived.
     *   Place citations at the end of the paragraph, under the diagram/table, or after the code snippet.
+    *   For Mermaid diagrams, place citations AFTER the closing code fence, never inside the \`\`\`mermaid code block.
     *   Use the exact format: \`Sources: [filename.ext:start_line-end_line]()\` for a range, or \`Sources: [filename.ext:line_number]()\` for a single line. Multiple files can be cited: \`Sources: [file1.ext:1-10](), [file2.ext:5](), [dir/file3.ext]()\` (if the whole file is relevant and line numbers are not applicable or too broad).
     *   If an entire section is overwhelmingly based on one or two files, you can cite them under the section heading in addition to more specific citations within the section.
     *   IMPORTANT: You MUST cite AT LEAST 5 different source files throughout the wiki page to ensure comprehensive coverage.
@@ -1898,16 +1901,20 @@ IMPORTANT:
 
   const handleAskSubmit = async (askedQuestion: string, options: AskSubmitOptions) => {
     const nextParams = new URLSearchParams(searchParams.toString());
-    nextParams.set('type', repoType);
+    nextParams.set('type', effectiveRepoInfo.type || repoType);
     nextParams.set('provider', selectedProviderState || '');
     nextParams.set('model', selectedModelState || '');
     nextParams.set('is_custom_model', isCustomSelectedModelState ? 'true' : 'false');
     nextParams.set('custom_model', customSelectedModelState || '');
-    if (repoUrl) {
-      nextParams.set('repo_url', repoUrl);
+    if (effectiveRepoInfo.repoUrl) {
+      nextParams.set('repo_url', effectiveRepoInfo.repoUrl);
+    } else {
+      nextParams.delete('repo_url');
     }
-    if (localPath) {
-      nextParams.set('local_path', localPath);
+    if (effectiveRepoInfo.localPath) {
+      nextParams.set('local_path', effectiveRepoInfo.localPath);
+    } else {
+      nextParams.delete('local_path');
     }
     if (currentToken) {
       nextParams.set('token', currentToken);
